@@ -1,0 +1,2321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XXIV Congreso Uruguayo de Anestesiología - Programa Editable</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .header {
+            background: linear-gradient(90deg, #0f3460, #533483);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.8;
+            font-size: 1rem;
+        }
+
+        .toolbar {
+            background: rgba(0,0,0,0.3);
+            padding: 12px 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .toolbar-btn {
+            padding: 10px 18px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .toolbar-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: #e94560;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .btn-success {
+            background: #38ef7d;
+            color: #1a1a2e;
+        }
+
+        .btn-warning {
+            background: #f5a623;
+            color: #1a1a2e;
+        }
+
+        .edit-mode-indicator {
+            padding: 8px 16px;
+            background: #38ef7d;
+            color: #1a1a2e;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            display: none;
+        }
+
+        .edit-mode-indicator.active {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .controls {
+            background: rgba(255,255,255,0.05);
+            padding: 15px 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        select, input[type="text"] {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 0.9rem;
+        }
+
+        select option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #e94560;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px 20px;
+            background: rgba(0,0,0,0.2);
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            padding: 4px 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+        }
+
+        .alerts-panel {
+            background: linear-gradient(135deg, rgba(255, 0, 64, 0.2) 0%, rgba(255, 100, 100, 0.15) 100%);
+            border: 2px solid #ff0040;
+            border-left: 6px solid #ff0040;
+            padding: 20px 25px;
+            margin: 20px;
+            border-radius: 12px;
+            display: none;
+            box-shadow: 0 4px 20px rgba(255, 0, 64, 0.3);
+        }
+
+        .alerts-panel.visible {
+            display: block;
+            animation: alertSlideIn 0.4s ease;
+        }
+
+        @keyframes alertSlideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alerts-panel h3 {
+            color: #ff4466;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+        }
+
+        .alert-item {
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 0, 64, 0.15);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            border-left: 3px solid #ff4466;
+        }
+
+        .alert-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .alert-item strong {
+            color: #ff6b8a;
+        }
+
+        .main-container {
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .schedule-grid {
+            display: grid;
+            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        }
+
+        .day-column {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            overflow: hidden;
+            min-width: 300px;
+            min-height: 400px;
+        }
+
+        .day-header {
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .day-lunes { background: linear-gradient(90deg, #667eea, #764ba2); }
+        .day-martes { background: linear-gradient(90deg, #f093fb, #f5576c); }
+        .day-miercoles { background: linear-gradient(90deg, #4facfe, #00f2fe); }
+        .day-jueves { background: linear-gradient(90deg, #43e97b, #38f9d7); }
+        .day-viernes { background: linear-gradient(90deg, #fa709a, #fee140); }
+        .day-sabado { background: linear-gradient(90deg, #a8edea, #fed6e3); color: #333; }
+        .day-domingo { background: linear-gradient(90deg, #d299c2, #fef9d7); color: #333; }
+
+        .day-content {
+            padding: 10px;
+            min-height: 300px;
+        }
+
+        .day-content.drag-over {
+            background: rgba(56, 239, 125, 0.1);
+            border: 2px dashed #38ef7d;
+        }
+
+        .event {
+            margin-bottom: 10px;
+            padding: 12px;
+            border-radius: 8px;
+            position: relative;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .event:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .event.hidden {
+            display: none;
+        }
+
+        .event.draggable {
+            cursor: grab;
+        }
+
+        .event.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .event-time {
+            font-size: 0.75rem;
+            font-weight: bold;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .event-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .event-details {
+            font-size: 0.8rem;
+            opacity: 0.85;
+        }
+
+        .event-location {
+            font-size: 0.75rem;
+            margin-top: 6px;
+            padding: 3px 8px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+            display: inline-block;
+        }
+
+        .event-speakers {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .speaker-tag {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.2);
+        }
+
+        .event-actions {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            display: none;
+            gap: 4px;
+        }
+
+        .edit-mode .event-actions {
+            display: flex;
+        }
+
+        .event-action-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-edit {
+            background: #4facfe;
+            color: white;
+        }
+
+        .btn-delete {
+            background: #e94560;
+            color: white;
+        }
+
+        /* Event type colors */
+        .event-conferencia {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .event-taller {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .event-break {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            opacity: 0.7;
+        }
+
+        .event-almuerzo {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #333;
+        }
+
+        .event-ceremonia {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+        }
+
+        .event-simposio {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: #333;
+        }
+
+        .event-poster {
+            background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+        }
+
+        .event-mesa {
+            background: linear-gradient(135deg, #5f72bd 0%, #9b23ea 100%);
+        }
+
+        .event.has-conflict {
+            border: 4px solid #ff0040;
+            box-shadow: 0 0 25px rgba(255, 0, 64, 0.7), inset 0 0 20px rgba(255, 0, 64, 0.15);
+            animation: conflictPulse 1.5s infinite;
+            position: relative;
+        }
+
+        .event.has-conflict::before {
+            content: '⚠️ CONFLICTO DE HORARIO';
+            position: absolute;
+            top: -28px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff0040;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        @keyframes conflictPulse {
+            0%, 100% {
+                box-shadow: 0 0 25px rgba(255, 0, 64, 0.7), inset 0 0 20px rgba(255, 0, 64, 0.15);
+            }
+            50% {
+                box-shadow: 0 0 40px rgba(255, 0, 64, 1), inset 0 0 30px rgba(255, 0, 64, 0.25);
+            }
+        }
+
+        .conflict-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ff0040;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: bold;
+            animation: badgePulse 1s infinite;
+            border: 2px solid white;
+        }
+
+        @keyframes badgePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .edit-mode .conflict-badge {
+            right: 70px;
+        }
+
+        /* Mobile edit controls */
+        .mobile-actions {
+            display: none;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .edit-mode .mobile-actions {
+            display: flex;
+        }
+
+        .mobile-btn {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: none;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            touch-action: manipulation;
+        }
+
+        .mobile-btn-move {
+            background: #4facfe;
+            color: white;
+        }
+
+        .mobile-btn-edit {
+            background: #38ef7d;
+            color: #1a1a2e;
+        }
+
+        .mobile-btn-delete {
+            background: #e94560;
+            color: white;
+        }
+
+        /* Move modal */
+        .move-modal {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a1a2e;
+            border-radius: 20px 20px 0 0;
+            padding: 20px;
+            z-index: 1001;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .move-modal.visible {
+            display: block;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .move-modal h3 {
+            margin-bottom: 15px;
+            color: #e94560;
+        }
+
+        .move-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+        }
+
+        .move-modal-overlay.visible {
+            display: block;
+        }
+
+        .day-option {
+            padding: 15px;
+            margin-bottom: 8px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.05);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1rem;
+            transition: background 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .day-option:hover, .day-option:active {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .day-option.current {
+            border-color: #38ef7d;
+            background: rgba(56, 239, 125, 0.1);
+        }
+
+        .day-option-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .cancel-move-btn {
+            width: 100%;
+            padding: 15px;
+            margin-top: 10px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .toolbar {
+                padding: 10px;
+                gap: 8px;
+            }
+
+            .toolbar-btn {
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .control-group {
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .control-group label {
+                margin-bottom: 4px;
+            }
+
+            .event-actions {
+                position: static;
+                display: none !important;
+            }
+
+            .edit-mode .mobile-actions {
+                display: flex;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .info-row {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.3rem;
+            }
+
+            .schedule-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-panel {
+                grid-template-columns: repeat(2, 1fr);
+                padding: 15px;
+                margin: 0 10px 15px;
+            }
+
+            .legend {
+                display: none;
+            }
+
+            .edit-mode-indicator {
+                font-size: 0.75rem;
+                padding: 6px 12px;
+            }
+
+            .edit-mode-indicator.active {
+                display: block;
+                text-align: center;
+                width: 100%;
+            }
+        }
+
+        /* Desktop: hide mobile buttons, show drag */
+        @media (min-width: 769px) {
+            .mobile-actions {
+                display: none !important;
+            }
+
+            .edit-mode .event-actions {
+                display: flex;
+            }
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.visible {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1a2e;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 600px;
+            width: 95%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Event info display styles */
+        .event-info-grid {
+            display: grid;
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .info-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 15px;
+            border-left: 4px solid #e94560;
+        }
+
+        .info-card.time-card {
+            border-left-color: #4facfe;
+        }
+
+        .info-card.location-card {
+            border-left-color: #38ef7d;
+        }
+
+        .info-card.speakers-card {
+            border-left-color: #fa709a;
+        }
+
+        .info-card.notes-card {
+            border-left-color: #f5a623;
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            opacity: 0.6;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .info-value.large {
+            font-size: 1.3rem;
+        }
+
+        .info-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .speaker-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .speaker-chip {
+            background: rgba(255,255,255,0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .notes-text {
+            font-style: italic;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: #e94560;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        .modal-close:hover {
+            opacity: 1;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 0.9rem;
+        }
+
+        .form-group select option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            margin: 0 20px 20px;
+            border-radius: 12px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #e94560;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .speaker-highlight {
+            border: 3px solid #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success {
+            background: #38ef7d;
+            color: #1a1a2e;
+        }
+
+        .toast.info {
+            background: #4facfe;
+        }
+
+        .toast.warning {
+            background: #f5a623;
+            color: #1a1a2e;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+            .toolbar, .controls, .legend, .print-btn, .event-actions {
+                display: none !important;
+            }
+            .event {
+                break-inside: avoid;
+                color: black !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>XXIV Congreso Uruguayo de Anestesiología</h1>
+        <p>12 - 16 de Octubre 2026 | Programa Interactivo y Editable</p>
+    </div>
+
+    <div class="toolbar">
+        <button class="toolbar-btn btn-primary" onclick="toggleEditMode()">
+            ✏️ Modo Edición
+        </button>
+        <button class="toolbar-btn btn-success" onclick="addNewEvent()">
+            ➕ Nueva Actividad
+        </button>
+        <button class="toolbar-btn btn-secondary" onclick="exportData()">
+            📤 Exportar JSON
+        </button>
+        <button class="toolbar-btn btn-secondary" onclick="importData()">
+            📥 Importar JSON
+        </button>
+        <button class="toolbar-btn btn-warning" onclick="resetData()">
+            🔄 Restaurar Original
+        </button>
+        <button class="toolbar-btn btn-secondary" onclick="window.print()">
+            🖨️ Imprimir / PDF
+        </button>
+        <div class="edit-mode-indicator" id="editIndicator">
+            ✏️ MODO EDICIÓN ACTIVO
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label>Filtrar por tipo:</label>
+            <select id="filterType">
+                <option value="all">Todos</option>
+                <option value="conferencia">Conferencias</option>
+                <option value="taller">Talleres</option>
+                <option value="mesa">Mesas Redondas</option>
+                <option value="simposio">Simposios</option>
+                <option value="ceremonia">Ceremonias</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Filtrar por día:</label>
+            <select id="filterDay">
+                <option value="all">Todos los días</option>
+                <option value="lunes">Lunes 12</option>
+                <option value="martes">Martes 13</option>
+                <option value="miercoles">Miércoles 14</option>
+                <option value="jueves">Jueves 15</option>
+                <option value="viernes">Viernes 16</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Buscar ponente:</label>
+            <input type="text" id="searchSpeaker" placeholder="Nombre del ponente...">
+        </div>
+        <div class="control-group">
+            <label>Ubicación:</label>
+            <select id="filterLocation">
+                <option value="all">Todas</option>
+                <option value="salon">Salón Principal</option>
+                <option value="pb">PB y Primer Piso</option>
+                <option value="subsuelo">Subsuelo</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #667eea, #764ba2);"></div> Conferencias</div>
+        <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #11998e, #38ef7d);"></div> Talleres</div>
+        <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #5f72bd, #9b23ea);"></div> Mesas Redondas</div>
+        <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #fa709a, #fee140);"></div> Simposios</div>
+        <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #f093fb, #f5576c);"></div> Coffee Break</div>
+        <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #ffecd2, #fcb69f);"></div> Almuerzo</div>
+        <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #a8edea, #fed6e3);"></div> Ceremonias</div>
+        <div class="legend-item"><div class="legend-color" style="background: #e94560;"></div> Conflicto</div>
+    </div>
+
+    <div class="alerts-panel" id="alertsPanel">
+        <h3>⚠️ Posibles Conflictos Detectados</h3>
+        <div id="alertsList"></div>
+    </div>
+
+    <div class="stats-panel">
+        <div class="stat-card">
+            <div class="stat-number" id="statConferencias">0</div>
+            <div class="stat-label">Conferencias</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="statTalleres">0</div>
+            <div class="stat-label">Talleres</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="statPonentes">0</div>
+            <div class="stat-label">Ponentes</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="statConflictos">0</div>
+            <div class="stat-label">Conflictos</div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="schedule-grid" id="scheduleGrid"></div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Editar Actividad</h2>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <form id="eventForm">
+                <input type="hidden" id="eventId">
+
+                <div class="form-group">
+                    <label>Título de la actividad</label>
+                    <input type="text" id="eventTitle" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Día</label>
+                        <select id="eventDay" required>
+                            <option value="sabado">Sábado 3/10</option>
+                            <option value="domingo">Domingo 4/10</option>
+                            <option value="lunes">Lunes 12/10</option>
+                            <option value="martes">Martes 13/10</option>
+                            <option value="miercoles">Miércoles 14/10</option>
+                            <option value="jueves">Jueves 15/10</option>
+                            <option value="viernes">Viernes 16/10</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <select id="eventType" required>
+                            <option value="conferencia">Conferencia</option>
+                            <option value="taller">Taller</option>
+                            <option value="mesa">Mesa Redonda</option>
+                            <option value="simposio">Simposio</option>
+                            <option value="ceremonia">Ceremonia</option>
+                            <option value="break">Coffee Break</option>
+                            <option value="almuerzo">Almuerzo</option>
+                            <option value="poster">Posters</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Hora inicio (ej: 08:30)</label>
+                        <input type="text" id="eventStartTime" placeholder="08:30" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Hora fin (ej: 10:30)</label>
+                        <input type="text" id="eventEndTime" placeholder="10:30" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Ubicación</label>
+                    <select id="eventLocation">
+                        <option value="">Sin especificar</option>
+                        <option value="Salón Principal">Salón Principal</option>
+                        <option value="PB y Primer Piso">PB y Primer Piso</option>
+                        <option value="Subsuelo">Subsuelo</option>
+                        <option value="Sede SAU">Sede SAU</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Coordinadores (separados por coma)</label>
+                    <input type="text" id="eventCoordinators" placeholder="Dr. Juan Pérez, Dra. María López">
+                </div>
+
+                <div class="form-group">
+                    <label>Invitados/Ponentes (separados por coma)</label>
+                    <input type="text" id="eventSpeakers" placeholder="Dr. Carlos García">
+                </div>
+
+                <div class="form-group">
+                    <label>Cupos (opcional)</label>
+                    <input type="text" id="eventCupos" placeholder="mín. 6, máx. 12">
+                </div>
+
+                <div class="form-group">
+                    <label>Observaciones / Notas</label>
+                    <textarea id="eventNotes" placeholder="Notas internas, pendientes, recordatorios..." rows="3"></textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="toolbar-btn btn-secondary" onclick="closeEditModal()">Cancelar</button>
+                    <button type="submit" class="toolbar-btn btn-success">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal" id="importModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Importar Datos JSON</h2>
+                <button class="modal-close" onclick="closeImportModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Pegá el JSON aquí:</label>
+                <textarea id="importJson" rows="10"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="toolbar-btn btn-secondary" onclick="closeImportModal()">Cancelar</button>
+                <button class="toolbar-btn btn-success" onclick="doImport()">Importar</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="fileInput" style="display: none" accept=".json">
+
+    <!-- Move Modal (Mobile) -->
+    <div class="move-modal-overlay" id="moveOverlay" onclick="closeMoveModal()"></div>
+    <div class="move-modal" id="moveModal">
+        <h3>📅 Mover a otro día</h3>
+        <div id="dayOptions"></div>
+        <button class="cancel-move-btn" onclick="closeMoveModal()">Cancelar</button>
+    </div>
+
+    <script>
+        // Original data (for reset)
+        const originalEvents = [
+            // Pre-Congress - Lunes 12
+            {
+                id: 1,
+                day: 'lunes',
+                dayLabel: 'Lunes 12/10',
+                time: '08:30-14:30',
+                startHour: 8.5,
+                endHour: 14.5,
+                title: 'Taller de PBM (Patient Blood Management)',
+                type: 'taller',
+                location: 'PB y Primer Piso',
+                coordinators: ['Dr. William Baptista'],
+                speakers: [],
+                cupos: 'máx. 25'
+            },
+            // Pre-Congress - Martes 13
+            {
+                id: 2,
+                day: 'martes',
+                dayLabel: 'Martes 13/10',
+                time: '08:30-12:30',
+                startHour: 8.5,
+                endHour: 12.5,
+                title: 'Taller de PoCUS en Anestesia Pediátrica',
+                type: 'taller',
+                location: 'PB y Primer Piso',
+                coordinators: ['Dra. Florencia Galarraga'],
+                speakers: ['Dr. Tiago Rossi'],
+                cupos: 'máx. 25'
+            },
+            {
+                id: 3,
+                day: 'martes',
+                dayLabel: 'Martes 13/10',
+                time: '14:30-18:30',
+                startHour: 14.5,
+                endHour: 18.5,
+                title: 'Taller de PoCUS en Anestesia Pediátrica',
+                type: 'taller',
+                location: 'PB y Primer Piso',
+                coordinators: ['Dra. Florencia Galarraga'],
+                speakers: ['Dr. Tiago Rossi'],
+                cupos: 'máx. 25'
+            },
+            // Miércoles 14 - Conferencias
+            {
+                id: 4,
+                day: 'miercoles',
+                dayLabel: 'Miércoles 14/10',
+                time: '08:30-10:30',
+                startHour: 8.5,
+                endHour: 10.5,
+                title: 'Anestesia en Obstetricia e Inteligencia Artificial',
+                type: 'conferencia',
+                location: 'Salón Principal',
+                coordinators: ['Dra. Maryana Núñez', 'Dra. Gabriela Castro'],
+                speakers: ['Dr. Mauricio Vasco']
+            },
+            {
+                id: 5,
+                day: 'miercoles',
+                dayLabel: 'Miércoles 14/10',
+                time: '10:30-11:00',
+                startHour: 10.5,
+                endHour: 11,
+                title: 'Coffee Break',
+                type: 'break',
+                location: '',
+                coordinators: [],
+                speakers: []
+            },
+            {
+                id: 6,
+                day: 'miercoles',
+                dayLabel: 'Miércoles 14/10',
+                time: '11:00-13:00',
+                startHour: 11,
+                endHour: 13,
+                title: 'Anestesia en Pediatría',
+                type: 'conferencia',
+                location: 'Salón Principal',
+                coordinators: ['Dr. Federico Cristiani', 'Dra. Natalia Solari'],
+                speakers: []
+            },
+            {
+                id: 7,
+                day: 'miercoles',
+                dayLabel: 'Miércoles 14/10',
+                time: '13:00-14:30',
+                startHour: 13,
+                endHour: 14.5,
+                title: 'Almuerzo',
+                type: 'almuerzo',
+                location: '',
+                coordinators: [],
+                speakers: []
+            },
+            {
+                id: 8,
+                day: 'miercoles',
+                dayLabel: 'Miércoles 14/10',
+                time: '14:30-16:30',
+                startHour: 14.5,
+                endHour: 16.5,
+                title: 'Bienestar Profesional en Anestesia',
+                type: 'conferencia',
+                location: 'Salón Principal',
+                coordinators: ['Dra. Mariana De Larrobla'],
+                speakers: ['Dr. Leonardo Ghioldi', 'Dra. Gabriela Guerra']
+            },
+            {
+                id: 9,
+                day: 'miercoles',
+                dayLabel: 'Miércoles 14/10',
+                time: '16:30-17:00',
+                startHour: 16.5,
+                endHour: 17,
+                title: 'Coffee Break',
+                type: 'break',
+                location: '',
+                coordinators: [],
+                speakers: []
+            },
+            {
+                id: 10,
+                day: 'miercoles',
+                dayLabel: 'Miércoles 14/10',
+                time: '17:00-18:30',
+                startHour: 17,
+                endHour: 18.5,
+                title: 'Inteligencia Artificial y Anestesia',
+                type: 'conferencia',
+                location: 'Salón Principal',
+                coordinators: ['Dr. Gonzalo Solla'],
+                speakers: ['Ing. Eduardo Mangarelli']
+            },
+            {
+                id: 11,
+                day: 'miercoles',
+                dayLabel: 'Miércoles 14/10',
+                time: '19:00',
+                startHour: 19,
+                endHour: 20,
+                title: 'Ceremonia Inaugural',
+                type: 'ceremonia',
+                location: 'Salón Principal',
+                coordinators: [],
+                speakers: []
+            },
+            // Miércoles 14 - Talleres
+            {
+                id: 12,
+                day: 'miercoles',
+                dayLabel: 'Miércoles 14/10',
+                time: '08:30-12:30',
+                startHour: 8.5,
+                endHour: 12.5,
+                title: 'Taller de Anestesia Cardiovascular',
+                type: 'taller',
+                location: 'Subsuelo',
+                coordinators: ['Dra. Jimena Calviño', 'Dra. Leticia Turconi'],
+                speakers: []
+            },
+            {
+                id: 13,
+                day: 'miercoles',
+                dayLabel: 'Miércoles 14/10',
+                time: '08:30-13:00',
+                startHour: 8.5,
+                endHour: 13,
+                title: 'Simulación Crisis en Adultos',
+                type: 'taller',
+                location: 'PB y Primer Piso',
+                coordinators: ['Dr. William Baptista'],
+                speakers: ['Dr. Rodrigo Rubio'],
+                cupos: 'mín. 6, máx. 12'
+            },
+            {
+                id: 14,
+                day: 'miercoles',
+                dayLabel: 'Miércoles 14/10',
+                time: '14:30-18:30',
+                startHour: 14.5,
+                endHour: 18.5,
+                title: 'Taller de Anestesia Cardiovascular',
+                type: 'taller',
+                location: 'Subsuelo',
+                coordinators: ['Dra. Jimena Calviño', 'Dra. Leticia Turconi'],
+                speakers: []
+            },
+            {
+                id: 15,
+                day: 'miercoles',
+                dayLabel: 'Miércoles 14/10',
+                time: '14:00-18:30',
+                startHour: 14,
+                endHour: 18.5,
+                title: 'Simulación Crisis en Adultos',
+                type: 'taller',
+                location: 'PB y Primer Piso',
+                coordinators: ['Dr. William Baptista'],
+                speakers: ['Dr. Rodrigo Rubio'],
+                cupos: 'mín. 6, máx. 12'
+            },
+            // Jueves 15 - Conferencias
+            {
+                id: 16,
+                day: 'jueves',
+                dayLabel: 'Jueves 15/10',
+                time: '08:30-10:30',
+                startHour: 8.5,
+                endHour: 10.5,
+                title: 'Anestesia Ambulatoria',
+                type: 'conferencia',
+                location: 'Salón Principal',
+                coordinators: ['Dr. Martín Pérez de Palleja'],
+                speakers: []
+            },
+            {
+                id: 17,
+                day: 'jueves',
+                dayLabel: 'Jueves 15/10',
+                time: '10:30-11:00',
+                startHour: 10.5,
+                endHour: 11,
+                title: 'Coffee Break',
+                type: 'break',
+                location: '',
+                coordinators: [],
+                speakers: []
+            },
+            {
+                id: 18,
+                day: 'jueves',
+                dayLabel: 'Jueves 15/10',
+                time: '11:00-13:00',
+                startHour: 11,
+                endHour: 13,
+                title: 'Obesidad Mórbida, Anestesia e Inteligencia Artificial',
+                type: 'conferencia',
+                location: 'Salón Principal',
+                coordinators: ['Dr. Federico Kuster'],
+                speakers: []
+            },
+            {
+                id: 19,
+                day: 'jueves',
+                dayLabel: 'Jueves 15/10',
+                time: '13:00-14:30',
+                startHour: 13,
+                endHour: 14.5,
+                title: 'Almuerzo',
+                type: 'almuerzo',
+                location: '',
+                coordinators: [],
+                speakers: []
+            },
+            {
+                id: 20,
+                day: 'jueves',
+                dayLabel: 'Jueves 15/10',
+                time: '13:15-14:30',
+                startHour: 13.25,
+                endHour: 14.5,
+                title: 'Simposio Satélite',
+                type: 'simposio',
+                location: 'Salón Principal',
+                coordinators: [],
+                speakers: []
+            },
+            {
+                id: 21,
+                day: 'jueves',
+                dayLabel: 'Jueves 15/10',
+                time: '14:30-16:30',
+                startHour: 14.5,
+                endHour: 16.5,
+                title: 'Vía de Aire e Inteligencia Artificial',
+                type: 'conferencia',
+                location: 'Salón Principal',
+                coordinators: ['Dra. Liliana Ciuffreda'],
+                speakers: []
+            },
+            {
+                id: 22,
+                day: 'jueves',
+                dayLabel: 'Jueves 15/10',
+                time: '16:30-17:00',
+                startHour: 16.5,
+                endHour: 17,
+                title: 'Coffee Break',
+                type: 'break',
+                location: '',
+                coordinators: [],
+                speakers: []
+            },
+            {
+                id: 23,
+                day: 'jueves',
+                dayLabel: 'Jueves 15/10',
+                time: '17:00-18:30',
+                startHour: 17,
+                endHour: 18.5,
+                title: 'Mesa Redonda: Ejercicio Profesional ante el Riesgo Legal',
+                type: 'mesa',
+                location: 'Salón Principal',
+                coordinators: [],
+                speakers: ['Abogada SAIP', 'UAA de Medicina Legal']
+            },
+            // Jueves 15 - Talleres
+            {
+                id: 24,
+                day: 'jueves',
+                dayLabel: 'Jueves 15/10',
+                time: '08:00-10:00',
+                startHour: 8,
+                endHour: 10,
+                title: 'Taller Serious Game (Sesión 1)',
+                type: 'taller',
+                location: 'Subsuelo',
+                coordinators: ['Dr. Rodrigo Rubio'],
+                speakers: ['Dra. Ana Lila Garduño']
+            },
+            {
+                id: 25,
+                day: 'jueves',
+                dayLabel: 'Jueves 15/10',
+                time: '10:30-12:30',
+                startHour: 10.5,
+                endHour: 12.5,
+                title: 'Taller Serious Game (Sesión 2)',
+                type: 'taller',
+                location: 'Subsuelo',
+                coordinators: ['Dr. Rodrigo Rubio'],
+                speakers: ['Dra. Ana Lila Garduño']
+            },
+            {
+                id: 26,
+                day: 'jueves',
+                dayLabel: 'Jueves 15/10',
+                time: '08:30-12:30',
+                startHour: 8.5,
+                endHour: 12.5,
+                title: 'Taller de TIVA',
+                type: 'taller',
+                location: 'PB y Primer Piso',
+                coordinators: ['Dr. Diego Sarasua'],
+                speakers: ['Dr. David Ramírez']
+            },
+            {
+                id: 27,
+                day: 'jueves',
+                dayLabel: 'Jueves 15/10',
+                time: '14:00-16:00',
+                startHour: 14,
+                endHour: 16,
+                title: 'Taller Serious Game (Sesión 3)',
+                type: 'taller',
+                location: 'Subsuelo',
+                coordinators: ['Dr. Rodrigo Rubio'],
+                speakers: ['Dra. Ana Lila Garduño']
+            },
+            {
+                id: 28,
+                day: 'jueves',
+                dayLabel: 'Jueves 15/10',
+                time: '16:30-18:30',
+                startHour: 16.5,
+                endHour: 18.5,
+                title: 'Taller Serious Game (Sesión 4)',
+                type: 'taller',
+                location: 'Subsuelo',
+                coordinators: ['Dr. Rodrigo Rubio'],
+                speakers: ['Dra. Ana Lila Garduño']
+            },
+            {
+                id: 29,
+                day: 'jueves',
+                dayLabel: 'Jueves 15/10',
+                time: '14:00-18:30',
+                startHour: 14,
+                endHour: 18.5,
+                title: 'Simulación Crítica en Obstetricia',
+                type: 'taller',
+                location: 'PB y Primer Piso',
+                coordinators: ['Dra. Gabriela Castro', 'Dra. Maryana Núñez'],
+                speakers: ['Dr. Mauricio Vasco']
+            },
+            // Viernes 16 - Conferencias
+            {
+                id: 30,
+                day: 'viernes',
+                dayLabel: 'Viernes 16/10',
+                time: '08:30-10:30',
+                startHour: 8.5,
+                endHour: 10.5,
+                title: 'Anestesia en el Paciente Politraumatizado',
+                type: 'conferencia',
+                location: 'Salón Principal',
+                coordinators: ['Dr. Gonzalo Irizaga'],
+                speakers: ['Dr. Samir Lasik', 'Dra. Candela Delgado', 'Dr. Bruno Suhr']
+            },
+            {
+                id: 31,
+                day: 'viernes',
+                dayLabel: 'Viernes 16/10',
+                time: '10:30-11:00',
+                startHour: 10.5,
+                endHour: 11,
+                title: 'Coffee Break',
+                type: 'break',
+                location: '',
+                coordinators: [],
+                speakers: []
+            },
+            {
+                id: 32,
+                day: 'viernes',
+                dayLabel: 'Viernes 16/10',
+                time: '11:00-13:00',
+                startHour: 11,
+                endHour: 13,
+                title: 'Batalla de los Residentes',
+                type: 'conferencia',
+                location: 'Salón Principal',
+                coordinators: ['Dr. Renzo García', 'Dr. Ernesto Balverde'],
+                speakers: []
+            },
+            {
+                id: 33,
+                day: 'viernes',
+                dayLabel: 'Viernes 16/10',
+                time: '13:00-14:30',
+                startHour: 13,
+                endHour: 14.5,
+                title: 'Almuerzo',
+                type: 'almuerzo',
+                location: '',
+                coordinators: [],
+                speakers: []
+            },
+            {
+                id: 34,
+                day: 'viernes',
+                dayLabel: 'Viernes 16/10',
+                time: '13:15-14:30',
+                startHour: 13.25,
+                endHour: 14.5,
+                title: 'Simposio Satélite',
+                type: 'simposio',
+                location: 'Salón Principal',
+                coordinators: [],
+                speakers: []
+            },
+            {
+                id: 35,
+                day: 'viernes',
+                dayLabel: 'Viernes 16/10',
+                time: '14:30-16:30',
+                startHour: 14.5,
+                endHour: 16.5,
+                title: 'Sesión de Presentación de Posters',
+                type: 'poster',
+                location: 'Salón Principal',
+                coordinators: [],
+                speakers: []
+            },
+            {
+                id: 36,
+                day: 'viernes',
+                dayLabel: 'Viernes 16/10',
+                time: '17:00',
+                startHour: 17,
+                endHour: 18,
+                title: 'Entrega de Premios y Acto de Clausura',
+                type: 'ceremonia',
+                location: 'Salón Principal',
+                coordinators: [],
+                speakers: []
+            },
+            // Viernes 16 - Talleres
+            {
+                id: 37,
+                day: 'viernes',
+                dayLabel: 'Viernes 16/10',
+                time: '08:00-13:00',
+                startHour: 8,
+                endHour: 13,
+                title: 'Simulación Crítica en Anestesia Regional',
+                type: 'taller',
+                location: 'PB y Primer Piso',
+                coordinators: [],
+                speakers: []
+            },
+            // Talleres Enfermería
+            {
+                id: 38,
+                day: 'sabado',
+                dayLabel: 'Sábado 3/10',
+                time: '08:30-12:30',
+                startHour: 8.5,
+                endHour: 12.5,
+                title: 'Taller de Enfermería (Sesión 1)',
+                type: 'taller',
+                location: 'Sede SAU',
+                coordinators: ['Dra. Leticia Duarte'],
+                speakers: []
+            },
+            {
+                id: 39,
+                day: 'sabado',
+                dayLabel: 'Sábado 3/10',
+                time: '14:30-18:30',
+                startHour: 14.5,
+                endHour: 18.5,
+                title: 'Taller de Enfermería (Sesión 2)',
+                type: 'taller',
+                location: 'Sede SAU',
+                coordinators: ['Dra. Leticia Duarte'],
+                speakers: []
+            },
+            {
+                id: 40,
+                day: 'domingo',
+                dayLabel: 'Domingo 4/10',
+                time: '08:30-12:30',
+                startHour: 8.5,
+                endHour: 12.5,
+                title: 'Taller de Enfermería (Sesión 3)',
+                type: 'taller',
+                location: 'Sede SAU',
+                coordinators: ['Dra. Leticia Duarte'],
+                speakers: []
+            },
+            {
+                id: 41,
+                day: 'domingo',
+                dayLabel: 'Domingo 4/10',
+                time: '14:30-18:30',
+                startHour: 14.5,
+                endHour: 18.5,
+                title: 'Taller de Enfermería (Sesión 4)',
+                type: 'taller',
+                location: 'Sede SAU',
+                coordinators: ['Dra. Leticia Duarte'],
+                speakers: []
+            }
+        ];
+
+        // Working data
+        let events = JSON.parse(localStorage.getItem('congressEvents')) || JSON.parse(JSON.stringify(originalEvents));
+        let editMode = false;
+        let nextId = Math.max(...events.map(e => e.id || 0)) + 1;
+        let draggedEvent = null;
+
+        const dayOrder = ['sabado', 'domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes'];
+        const dayLabels = {
+            'sabado': 'Sábado 3/10',
+            'domingo': 'Domingo 4/10',
+            'lunes': 'Lunes 12/10',
+            'martes': 'Martes 13/10',
+            'miercoles': 'Miércoles 14/10',
+            'jueves': 'Jueves 15/10',
+            'viernes': 'Viernes 16/10'
+        };
+
+        // Parse time string to hours
+        function parseTime(timeStr) {
+            if (!timeStr) return 0;
+            const parts = timeStr.split(':');
+            return parseInt(parts[0]) + (parseInt(parts[1] || 0) / 60);
+        }
+
+        // Format hours to time string
+        function formatTime(hours) {
+            const h = Math.floor(hours);
+            const m = Math.round((hours - h) * 60);
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        }
+
+        // Save to localStorage
+        function saveData() {
+            localStorage.setItem('congressEvents', JSON.stringify(events));
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Toggle edit mode
+        function toggleEditMode() {
+            editMode = !editMode;
+            document.body.classList.toggle('edit-mode', editMode);
+            document.getElementById('editIndicator').classList.toggle('active', editMode);
+            renderSchedule();
+            showToast(editMode ? 'Modo edición activado' : 'Modo edición desactivado', editMode ? 'success' : 'info');
+        }
+
+        // Detect conflicts
+        function detectConflicts() {
+            const conflicts = [];
+            const speakerSchedule = {};
+
+            events.forEach((event, idx) => {
+                const allPeople = [...(event.coordinators || []), ...(event.speakers || [])];
+                allPeople.forEach(person => {
+                    if (!person || person === '') return;
+                    const key = person.toLowerCase().trim();
+                    if (!speakerSchedule[key]) {
+                        speakerSchedule[key] = [];
+                    }
+                    speakerSchedule[key].push({ event, index: idx });
+                });
+            });
+
+            Object.keys(speakerSchedule).forEach(person => {
+                const schedule = speakerSchedule[person];
+                for (let i = 0; i < schedule.length; i++) {
+                    for (let j = i + 1; j < schedule.length; j++) {
+                        const e1 = schedule[i].event;
+                        const e2 = schedule[j].event;
+
+                        if (e1.day === e2.day) {
+                            if (!(e1.endHour <= e2.startHour || e2.endHour <= e1.startHour)) {
+                                conflicts.push({
+                                    person,
+                                    event1: e1,
+                                    event2: e2,
+                                    idx1: schedule[i].index,
+                                    idx2: schedule[j].index
+                                });
+                            }
+                        }
+                    }
+                }
+            });
+
+            return conflicts;
+        }
+
+        // Render schedule
+        function renderSchedule() {
+            const grid = document.getElementById('scheduleGrid');
+            grid.innerHTML = '';
+
+            const filterType = document.getElementById('filterType').value;
+            const filterDay = document.getElementById('filterDay').value;
+            const filterLocation = document.getElementById('filterLocation').value;
+            const searchSpeaker = document.getElementById('searchSpeaker').value.toLowerCase();
+
+            const conflicts = detectConflicts();
+            const conflictIndices = new Set();
+            conflicts.forEach(c => {
+                conflictIndices.add(c.idx1);
+                conflictIndices.add(c.idx2);
+            });
+
+            // Update alerts
+            const alertsPanel = document.getElementById('alertsPanel');
+            const alertsList = document.getElementById('alertsList');
+            if (conflicts.length > 0) {
+                alertsPanel.classList.add('visible');
+                alertsList.innerHTML = conflicts.map(c => `
+                    <div class="alert-item">
+                        <strong>${c.person}</strong> tiene solapamiento:<br>
+                        "${c.event1.title}" (${c.event1.time}) vs<br>
+                        "${c.event2.title}" (${c.event2.time})
+                    </div>
+                `).join('');
+            } else {
+                alertsPanel.classList.remove('visible');
+            }
+
+            // Update stats
+            document.getElementById('statConferencias').textContent = events.filter(e => e.type === 'conferencia').length;
+            document.getElementById('statTalleres').textContent = events.filter(e => e.type === 'taller').length;
+
+            const allSpeakers = new Set();
+            events.forEach(e => {
+                (e.coordinators || []).forEach(s => s && allSpeakers.add(s));
+                (e.speakers || []).forEach(s => s && allSpeakers.add(s));
+            });
+            document.getElementById('statPonentes').textContent = allSpeakers.size;
+            document.getElementById('statConflictos').textContent = conflicts.length;
+
+            // Group by day
+            const eventsByDay = {};
+            dayOrder.forEach(day => eventsByDay[day] = []);
+            events.forEach((event, idx) => {
+                event._idx = idx;
+                if (eventsByDay[event.day]) {
+                    eventsByDay[event.day].push(event);
+                }
+            });
+
+            // Render days
+            dayOrder.forEach(day => {
+                if (filterDay !== 'all' && day !== filterDay) return;
+
+                const dayEvents = eventsByDay[day];
+                if (dayEvents.length === 0 && !editMode) return;
+
+                const column = document.createElement('div');
+                column.className = 'day-column';
+                column.dataset.day = day;
+
+                const header = document.createElement('div');
+                header.className = `day-header day-${day}`;
+                header.textContent = dayLabels[day];
+                column.appendChild(header);
+
+                const content = document.createElement('div');
+                content.className = 'day-content';
+                content.dataset.day = day;
+
+                if (editMode) {
+                    content.addEventListener('dragover', handleDragOver);
+                    content.addEventListener('drop', handleDrop);
+                    content.addEventListener('dragleave', handleDragLeave);
+                }
+
+                dayEvents.sort((a, b) => a.startHour - b.startHour);
+
+                dayEvents.forEach(event => {
+                    if (filterType !== 'all' && event.type !== filterType) return;
+
+                    if (filterLocation !== 'all') {
+                        const loc = (event.location || '').toLowerCase();
+                        if (filterLocation === 'salon' && !loc.includes('salón') && !loc.includes('salon')) return;
+                        if (filterLocation === 'pb' && !loc.includes('pb') && !loc.includes('piso')) return;
+                        if (filterLocation === 'subsuelo' && !loc.includes('subsuelo')) return;
+                    }
+
+                    const allPeople = [...(event.coordinators || []), ...(event.speakers || [])].join(' ').toLowerCase();
+                    const matchesSpeaker = searchSpeaker === '' || allPeople.includes(searchSpeaker);
+
+                    const div = document.createElement('div');
+                    div.className = `event event-${event.type}`;
+                    div.dataset.eventId = event.id;
+
+                    if (!matchesSpeaker) div.classList.add('hidden');
+                    if (searchSpeaker && matchesSpeaker) div.classList.add('speaker-highlight');
+
+                    if (editMode) {
+                        div.draggable = true;
+                        div.classList.add('draggable');
+                        div.addEventListener('dragstart', handleDragStart);
+                        div.addEventListener('dragend', handleDragEnd);
+                    }
+
+                    if (conflictIndices.has(event._idx)) {
+                        div.classList.add('has-conflict');
+                    }
+
+                    div.innerHTML = `
+                        <div class="event-actions">
+                            <button class="event-action-btn btn-edit" onclick="event.stopPropagation(); editEvent(${event.id})" title="Editar">✏️</button>
+                            <button class="event-action-btn btn-delete" onclick="event.stopPropagation(); deleteEvent(${event.id})" title="Eliminar">🗑️</button>
+                        </div>
+                        ${conflictIndices.has(event._idx) ? '<span class="conflict-badge">!</span>' : ''}
+                        <div class="event-time">${event.time}</div>
+                        <div class="event-title">${event.title}</div>
+                        ${event.location ? `<span class="event-location">${event.location}</span>` : ''}
+                        <div class="event-speakers">
+                            ${(event.coordinators || []).map(c => c ? `<span class="speaker-tag">📋 ${c}</span>` : '').join('')}
+                            ${(event.speakers || []).map(s => s ? `<span class="speaker-tag">🎤 ${s}</span>` : '').join('')}
+                        </div>
+                        ${event.cupos ? `<div class="event-details">Cupos: ${event.cupos}</div>` : ''}
+                        <div class="mobile-actions">
+                            <button class="mobile-btn mobile-btn-move" onclick="event.stopPropagation(); openMoveModal(${event.id})">📅 Mover día</button>
+                            <button class="mobile-btn mobile-btn-edit" onclick="event.stopPropagation(); editEvent(${event.id})">✏️ Editar</button>
+                            <button class="mobile-btn mobile-btn-delete" onclick="event.stopPropagation(); deleteEvent(${event.id})">🗑️ Eliminar</button>
+                        </div>
+                    `;
+
+                    if (!editMode) {
+                        div.onclick = () => showEventDetails(event);
+                    }
+
+                    content.appendChild(div);
+                });
+
+                column.appendChild(content);
+                grid.appendChild(column);
+            });
+        }
+
+        // Drag and drop handlers
+        function handleDragStart(e) {
+            draggedEvent = events.find(ev => ev.id == e.target.dataset.eventId);
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            const newDay = e.currentTarget.dataset.day;
+            if (draggedEvent && newDay) {
+                draggedEvent.day = newDay;
+                draggedEvent.dayLabel = dayLabels[newDay];
+                saveData();
+                renderSchedule();
+                showToast(`Actividad movida a ${dayLabels[newDay]}`, 'success');
+            }
+        }
+
+        // Event details modal (view mode)
+        function showEventDetails(event) {
+            const modal = document.getElementById('editModal');
+            document.getElementById('modalTitle').textContent = event.title;
+            document.getElementById('eventForm').style.display = 'none';
+
+            const typeLabels = {
+                'conferencia': '📚 Conferencia',
+                'taller': '🔧 Taller',
+                'mesa': '💬 Mesa Redonda',
+                'simposio': '🎯 Simposio',
+                'ceremonia': '🎉 Ceremonia',
+                'break': '☕ Coffee Break',
+                'almuerzo': '🍽️ Almuerzo',
+                'poster': '📋 Posters'
+            };
+
+            const hasCoordinators = (event.coordinators || []).length > 0;
+            const hasSpeakers = (event.speakers || []).length > 0;
+
+            const infoHtml = `
+                <div class="event-info-grid">
+                    <div class="info-row">
+                        <div class="info-card time-card">
+                            <div class="info-label">Día</div>
+                            <div class="info-value large">${event.dayLabel}</div>
+                        </div>
+                        <div class="info-card time-card">
+                            <div class="info-label">Horario</div>
+                            <div class="info-value large">${event.time}</div>
+                        </div>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-card">
+                            <div class="info-label">Tipo de actividad</div>
+                            <div class="info-value">${typeLabels[event.type] || event.type}</div>
+                        </div>
+                        ${event.location ? `
+                        <div class="info-card location-card">
+                            <div class="info-label">Ubicación</div>
+                            <div class="info-value">📍 ${event.location}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    ${event.cupos ? `
+                    <div class="info-card">
+                        <div class="info-label">Cupos</div>
+                        <div class="info-value">👥 ${event.cupos}</div>
+                    </div>
+                    ` : ''}
+
+                    ${hasCoordinators ? `
+                    <div class="info-card speakers-card">
+                        <div class="info-label">Coordinadores</div>
+                        <div class="speaker-list">
+                            ${event.coordinators.map(c => `<span class="speaker-chip">📋 ${c}</span>`).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${hasSpeakers ? `
+                    <div class="info-card speakers-card">
+                        <div class="info-label">Invitados / Ponentes</div>
+                        <div class="speaker-list">
+                            ${event.speakers.map(s => `<span class="speaker-chip">🎤 ${s}</span>`).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${event.notes ? `
+                    <div class="info-card notes-card">
+                        <div class="info-label">Observaciones</div>
+                        <div class="notes-text">${event.notes}</div>
+                    </div>
+                    ` : ''}
+                </div>
+
+                <div class="modal-actions" style="margin-top: 25px;">
+                    <button class="toolbar-btn btn-secondary" onclick="closeEditModal()">Cerrar</button>
+                    <button class="toolbar-btn btn-primary" onclick="editEvent(${event.id})">✏️ Editar</button>
+                </div>
+            `;
+
+            const existingInfo = document.getElementById('eventInfo');
+            if (existingInfo) existingInfo.remove();
+
+            const infoDiv = document.createElement('div');
+            infoDiv.id = 'eventInfo';
+            infoDiv.innerHTML = infoHtml;
+            document.querySelector('.modal-content').appendChild(infoDiv);
+
+            modal.classList.add('visible');
+        }
+
+        // Edit event
+        function editEvent(id) {
+            const event = events.find(e => e.id == id);
+            if (!event) return;
+
+            document.getElementById('modalTitle').textContent = 'Editar Actividad';
+            document.getElementById('eventForm').style.display = 'block';
+
+            const existingInfo = document.getElementById('eventInfo');
+            if (existingInfo) existingInfo.remove();
+
+            document.getElementById('eventId').value = event.id;
+            document.getElementById('eventTitle').value = event.title;
+            document.getElementById('eventDay').value = event.day;
+            document.getElementById('eventType').value = event.type;
+
+            const times = (event.time || '').split('-');
+            document.getElementById('eventStartTime').value = times[0] || '';
+            document.getElementById('eventEndTime').value = times[1] || times[0] || '';
+
+            document.getElementById('eventLocation').value = event.location || '';
+            document.getElementById('eventCoordinators').value = (event.coordinators || []).join(', ');
+            document.getElementById('eventSpeakers').value = (event.speakers || []).join(', ');
+            document.getElementById('eventCupos').value = event.cupos || '';
+            document.getElementById('eventNotes').value = event.notes || '';
+
+            document.getElementById('editModal').classList.add('visible');
+        }
+
+        // Add new event
+        function addNewEvent() {
+            document.getElementById('modalTitle').textContent = 'Nueva Actividad';
+            document.getElementById('eventForm').style.display = 'block';
+
+            const existingInfo = document.getElementById('eventInfo');
+            if (existingInfo) existingInfo.remove();
+
+            document.getElementById('eventId').value = '';
+            document.getElementById('eventForm').reset();
+            document.getElementById('editModal').classList.add('visible');
+        }
+
+        // Delete event
+        function deleteEvent(id) {
+            if (confirm('¿Eliminar esta actividad?')) {
+                events = events.filter(e => e.id != id);
+                saveData();
+                renderSchedule();
+                showToast('Actividad eliminada', 'warning');
+            }
+        }
+
+        // Close edit modal
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('visible');
+        }
+
+        // Handle form submit
+        document.getElementById('eventForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('eventId').value;
+            const day = document.getElementById('eventDay').value;
+            const startTime = document.getElementById('eventStartTime').value;
+            const endTime = document.getElementById('eventEndTime').value;
+
+            const eventData = {
+                day: day,
+                dayLabel: dayLabels[day],
+                time: endTime ? `${startTime}-${endTime}` : startTime,
+                startHour: parseTime(startTime),
+                endHour: parseTime(endTime) || parseTime(startTime) + 1,
+                title: document.getElementById('eventTitle').value,
+                type: document.getElementById('eventType').value,
+                location: document.getElementById('eventLocation').value,
+                coordinators: document.getElementById('eventCoordinators').value.split(',').map(s => s.trim()).filter(s => s),
+                speakers: document.getElementById('eventSpeakers').value.split(',').map(s => s.trim()).filter(s => s),
+                cupos: document.getElementById('eventCupos').value,
+                notes: document.getElementById('eventNotes').value
+            };
+
+            if (id) {
+                const idx = events.findIndex(e => e.id == id);
+                if (idx !== -1) {
+                    eventData.id = parseInt(id);
+                    events[idx] = eventData;
+                }
+            } else {
+                eventData.id = nextId++;
+                events.push(eventData);
+            }
+
+            saveData();
+            closeEditModal();
+            renderSchedule();
+            showToast(id ? 'Actividad actualizada' : 'Actividad creada', 'success');
+        });
+
+        // Export data
+        function exportData() {
+            const dataStr = JSON.stringify(events, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'programa-congreso-2026.json';
+            a.click();
+            showToast('Datos exportados', 'success');
+        }
+
+        // Import data
+        function importData() {
+            document.getElementById('importModal').classList.add('visible');
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('visible');
+        }
+
+        function doImport() {
+            try {
+                const json = document.getElementById('importJson').value;
+                const imported = JSON.parse(json);
+                if (Array.isArray(imported)) {
+                    events = imported;
+                    nextId = Math.max(...events.map(e => e.id || 0)) + 1;
+                    saveData();
+                    closeImportModal();
+                    renderSchedule();
+                    showToast('Datos importados correctamente', 'success');
+                }
+            } catch (err) {
+                showToast('Error al importar: JSON inválido', 'warning');
+            }
+        }
+
+        // Reset data
+        function resetData() {
+            if (confirm('¿Restaurar el programa original? Se perderán todos los cambios.')) {
+                events = JSON.parse(JSON.stringify(originalEvents));
+                saveData();
+                renderSchedule();
+                showToast('Programa restaurado', 'info');
+            }
+        }
+
+        // Mobile move modal
+        let eventToMove = null;
+
+        function openMoveModal(eventId) {
+            eventToMove = events.find(e => e.id == eventId);
+            if (!eventToMove) return;
+
+            const dayColors = {
+                'sabado': '#a8edea',
+                'domingo': '#d299c2',
+                'lunes': '#667eea',
+                'martes': '#f093fb',
+                'miercoles': '#4facfe',
+                'jueves': '#43e97b',
+                'viernes': '#fa709a'
+            };
+
+            const dayIcons = {
+                'sabado': '🅢',
+                'domingo': '🅓',
+                'lunes': '🅛',
+                'martes': '🅜',
+                'miercoles': '🅜',
+                'jueves': '🅙',
+                'viernes': '🅥'
+            };
+
+            const optionsHtml = dayOrder.map(day => `
+                <div class="day-option ${day === eventToMove.day ? 'current' : ''}" onclick="moveEventToDay('${day}')">
+                    <div class="day-option-icon" style="background: ${dayColors[day]}; color: #1a1a2e;">
+                        ${dayIcons[day]}
+                    </div>
+                    <div>
+                        <strong>${dayLabels[day]}</strong>
+                        ${day === eventToMove.day ? '<br><small style="opacity:0.7">Día actual</small>' : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('dayOptions').innerHTML = optionsHtml;
+            document.getElementById('moveOverlay').classList.add('visible');
+            document.getElementById('moveModal').classList.add('visible');
+        }
+
+        function closeMoveModal() {
+            document.getElementById('moveOverlay').classList.remove('visible');
+            document.getElementById('moveModal').classList.remove('visible');
+            eventToMove = null;
+        }
+
+        function moveEventToDay(newDay) {
+            if (eventToMove && newDay !== eventToMove.day) {
+                eventToMove.day = newDay;
+                eventToMove.dayLabel = dayLabels[newDay];
+                saveData();
+                renderSchedule();
+                showToast(`Movido a ${dayLabels[newDay]}`, 'success');
+            }
+            closeMoveModal();
+        }
+
+        // Event listeners
+        document.getElementById('filterType').addEventListener('change', renderSchedule);
+        document.getElementById('filterDay').addEventListener('change', renderSchedule);
+        document.getElementById('filterLocation').addEventListener('change', renderSchedule);
+        document.getElementById('searchSpeaker').addEventListener('input', renderSchedule);
+
+        // Close modals on outside click
+        document.getElementById('editModal').addEventListener('click', e => {
+            if (e.target.id === 'editModal') closeEditModal();
+        });
+        document.getElementById('importModal').addEventListener('click', e => {
+            if (e.target.id === 'importModal') closeImportModal();
+        });
+
+        // Initial render
+        renderSchedule();
+    </script>
+</body>
+</html>
