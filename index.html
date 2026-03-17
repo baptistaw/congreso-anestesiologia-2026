@@ -2044,16 +2044,6 @@
                 if (filterDay !== 'all' && day !== filterDay) return;
 
                 const dayEvents = eventsByDay[day];
-                if (dayEvents.length === 0 && !editMode) return;
-
-                const column = document.createElement('div');
-                column.className = 'day-column';
-                column.dataset.day = day;
-
-                const header = document.createElement('div');
-                header.className = `day-header day-${day}`;
-                header.textContent = dayLabels[day];
-                column.appendChild(header);
 
                 // Filter events for this day
                 dayEvents.sort((a, b) => a.startHour - b.startHour);
