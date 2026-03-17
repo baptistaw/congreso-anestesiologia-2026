@@ -1856,7 +1856,7 @@
                     }
                 }
             } catch (e) {
-                console.warn('No se pudo cargar desde la nube, usando datos locales');
+                console.warn('No se pudo cargar desde la nube, usando datos locales', e);
             }
         })();
         let draggedEvent = null;
