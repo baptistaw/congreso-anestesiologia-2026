@@ -1835,10 +1835,30 @@
             }
         ];
 
-        // Working data
-        let events = JSON.parse(localStorage.getItem('congressEvents')) || JSON.parse(JSON.stringify(originalEvents));
+        // Cloud storage
+        const JSONBLOB_URL = 'https://jsonblob.com/api/jsonBlob/019cfcf3-c551-7ef7-82ab-b44e7c35cc26';
+
+        // Working data - starts with local, then cloud overwrites on load
+        let events = JSON.parse(JSON.stringify(originalEvents));
         let editMode = false;
         let nextId = Math.max(...events.map(e => e.id || 0)) + 1;
+
+        // Load latest data from cloud on startup
+        (async function loadFromCloud() {
+            try {
+                const res = await fetch(JSONBLOB_URL);
+                if (res.ok) {
+                    const cloudEvents = await res.json();
+                    if (Array.isArray(cloudEvents) && cloudEvents.length > 0) {
+                        events = cloudEvents;
+                        nextId = Math.max(...events.map(e => e.id || 0)) + 1;
+                        renderSchedule();
+                    }
+                }
+            } catch (e) {
+                console.warn('No se pudo cargar desde la nube, usando datos locales');
+            }
+        })();
         let draggedEvent = null;
         let isDragging = false;
 
@@ -1867,9 +1887,18 @@
             return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         }
 
-        // Save to localStorage
+        // Save to cloud
         function saveData() {
-            localStorage.setItem('congressEvents', JSON.stringify(events));
+            fetch(JSONBLOB_URL, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(events)
+            }).then(res => {
+                if (!res.ok) console.error('Error guardando en la nube');
+            }).catch(err => {
+                console.error('Error de red al guardar:', err);
+                showToast('Error al guardar en la nube', 'warning');
+            });
         }
 
         // Show toast notification
@@ -1964,28 +1993,46 @@
             }
             clusters.push(cluster);
 
-            // Assign tracks within each cluster
+            // Map title -> track so repeated workshops (AM/PM) stay in same column
+            const titleTrackMap = {};
+
             clusters.forEach(group => {
-                const tracks = [];
+                const tracks = []; // tracks[t] = last event in that track
+
+                // Single pass in time order: try preferred track first, then first available
                 group.forEach(ev => {
-                    let placed = false;
-                    for (let t = 0; t < tracks.length; t++) {
-                        const lastInTrack = tracks[t];
-                        if (ev.startHour >= lastInTrack.endHour) {
-                            ev._track = t;
-                            tracks[t] = ev;
-                            placed = true;
-                            break;
+                    const key = ev.title.trim().toLowerCase();
+                    const preferredTrack = titleTrackMap[key];
+
+                    // Try preferred track (from a previous cluster with same title)
+                    if (preferredTrack !== undefined) {
+                        while (tracks.length <= preferredTrack) tracks.push(null);
+                        if (!tracks[preferredTrack] || ev.startHour >= tracks[preferredTrack].endHour) {
+                            ev._track = preferredTrack;
+                            tracks[preferredTrack] = ev;
+                            titleTrackMap[key] = ev._track;
+                            return;
                         }
                     }
-                    if (!placed) {
-                        ev._track = tracks.length;
-                        tracks.push(ev);
+
+                    // Fallback: first available track
+                    for (let t = 0; t < tracks.length; t++) {
+                        if (!tracks[t] || ev.startHour >= tracks[t].endHour) {
+                            ev._track = t;
+                            tracks[t] = ev;
+                            titleTrackMap[key] = ev._track;
+                            return;
+                        }
                     }
+                    ev._track = tracks.length;
+                    tracks.push(ev);
+                    titleTrackMap[key] = ev._track;
                 });
+
                 const totalTracks = tracks.length;
                 group.forEach(ev => ev._totalTracks = totalTracks);
             });
+
         }
 
         function getDayTimeRange(dayEvents) {
@@ -2516,6 +2563,36 @@
             a.download = 'programa-congreso-2026.json';
             a.click();
             showToast('Datos exportados', 'success');
+        }
+
+        // Download updated HTML with current data baked into originalEvents
+        function downloadUpdatedHTML() {
+            const html = document.documentElement.outerHTML;
+            // Find and replace the originalEvents array in the source
+            const marker1 = 'const originalEvents = [';
+            const marker2 = '];\n\n        // Working data';
+            const idx1 = html.indexOf(marker1);
+            const idx2 = html.indexOf(marker2, idx1);
+            if (idx1 === -1 || idx2 === -1) {
+                showToast('Error: no se pudo actualizar el HTML', 'warning');
+                return;
+            }
+            const newEventsStr = JSON.stringify(events, null, 12)
+                .replace(/^\[/, '')
+                .replace(/\]$/, '')
+                .replace(/^            /gm, '            ');
+            const updatedHTML = '<!DOCTYPE html>\n<html lang="es">\n' +
+                html.substring(html.indexOf('<head>'), idx1) +
+                marker1 + '\n' + newEventsStr + '\n        ' +
+                html.substring(idx2);
+            const blob = new Blob([updatedHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'index.html';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('HTML actualizado descargado', 'success');
         }
 
         // Import data
