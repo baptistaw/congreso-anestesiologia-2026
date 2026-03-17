@@ -1786,6 +1786,7 @@
         let editMode = false;
         let nextId = Math.max(...events.map(e => e.id || 0)) + 1;
         let draggedEvent = null;
+        let isDragging = false;
 
         const dayOrder = ['sabado', 'domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes'];
         const dayLabels = {
@@ -2029,7 +2030,7 @@
                     `;
 
                     if (editMode) {
-                        div.onclick = () => editEvent(event.id);
+                        div.onclick = () => { if (!isDragging) editEvent(event.id); };
                     } else {
                         div.onclick = () => showEventDetails(event);
                     }
@@ -2044,6 +2045,7 @@
 
         // Drag and drop handlers
         function handleDragStart(e) {
+            isDragging = true;
             draggedEvent = events.find(ev => ev.id == e.target.dataset.eventId);
             e.target.classList.add('dragging');
             e.dataTransfer.effectAllowed = 'move';
@@ -2052,6 +2054,7 @@
         function handleDragEnd(e) {
             e.target.classList.remove('dragging');
             document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            setTimeout(() => { isDragging = false; }, 100);
         }
 
         function handleDragOver(e) {
