@@ -369,8 +369,20 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
 
-        .event-taller {
+        .event-taller-simulacion {
+            background: linear-gradient(135deg, #0d7377 0%, #14a085 100%);
+        }
+
+        .event-taller-habilidades {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .event-taller-casos {
+            background: linear-gradient(135deg, #1fab89 0%, #62d2a2 100%);
+        }
+
+        .event-taller-enfermeria {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
         }
 
         .event-break {
@@ -975,7 +987,10 @@
             <select id="filterType">
                 <option value="all">Todos</option>
                 <option value="conferencia">Conferencias</option>
-                <option value="taller">Talleres</option>
+                <option value="taller-simulacion">Talleres: Simulación</option>
+                <option value="taller-habilidades">Talleres: Habilidades</option>
+                <option value="taller-casos">Talleres: Discusión de Casos</option>
+                <option value="taller-enfermeria">Talleres: Enfermería</option>
                 <option value="mesa">Mesas Redondas</option>
                 <option value="simposio">Simposios</option>
                 <option value="ceremonia">Ceremonias</option>
@@ -1009,7 +1024,10 @@
 
     <div class="legend">
         <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #667eea, #764ba2);"></div> Conferencias</div>
-        <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #11998e, #38ef7d);"></div> Talleres</div>
+        <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #0d7377, #14a085);"></div> T. Simulación</div>
+        <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #11998e, #38ef7d);"></div> T. Habilidades</div>
+        <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #1fab89, #62d2a2);"></div> T. Disc. Casos</div>
+        <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #56ab2f, #a8e063);"></div> T. Enfermería</div>
         <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #5f72bd, #9b23ea);"></div> Mesas Redondas</div>
         <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #fa709a, #fee140);"></div> Simposios</div>
         <div class="legend-item"><div class="legend-color" style="background: linear-gradient(135deg, #f093fb, #f5576c);"></div> Coffee Break</div>
@@ -1078,7 +1096,10 @@
                         <label>Tipo</label>
                         <select id="eventType" required>
                             <option value="conferencia">Conferencia</option>
-                            <option value="taller">Taller</option>
+                            <option value="taller-simulacion">Taller Simulación</option>
+                            <option value="taller-habilidades">Taller Habilidades</option>
+                            <option value="taller-casos">Taller Disc. Casos</option>
+                            <option value="taller-enfermeria">Taller Enfermería</option>
                             <option value="mesa">Mesa Redonda</option>
                             <option value="simposio">Simposio</option>
                             <option value="ceremonia">Ceremonia</option>
@@ -1119,6 +1140,34 @@
                 <div class="form-group">
                     <label>Invitados/Ponentes (separados por coma)</label>
                     <input type="text" id="eventSpeakers" placeholder="Dr. Carlos García">
+                </div>
+
+                <div id="tallerFieldsContainer" style="display:none; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 15px; margin: 10px 0; background: rgba(255,255,255,0.05);">
+                    <h4 style="margin: 0 0 12px 0; color: #38ef7d; font-size: 0.95rem;">Equipo del Taller</h4>
+                    <div class="form-row">
+                        <div class="form-group"><label>Instructor 1</label><input type="text" id="eventInstructor1" placeholder="Nombre"></div>
+                        <div class="form-group"><label>Instructor 2</label><input type="text" id="eventInstructor2" placeholder="Nombre"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Instructor 3</label><input type="text" id="eventInstructor3" placeholder="Nombre"></div>
+                        <div class="form-group"><label>Instructor 4</label><input type="text" id="eventInstructor4" placeholder="Nombre"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Instructor 5</label><input type="text" id="eventInstructor5" placeholder="Nombre"></div>
+                        <div class="form-group"><label>Instructor 6</label><input type="text" id="eventInstructor6" placeholder="Nombre"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Instructor Asistente 1</label><input type="text" id="eventAsistente1" placeholder="Nombre"></div>
+                        <div class="form-group"><label>Instructor Asistente 2</label><input type="text" id="eventAsistente2" placeholder="Nombre"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Instructor Asistente 3</label><input type="text" id="eventAsistente3" placeholder="Nombre"></div>
+                        <div class="form-group"><label>Instructor Asistente 4</label><input type="text" id="eventAsistente4" placeholder="Nombre"></div>
+                    </div>
+                    <div class="form-group" id="tecnicoSimGroup" style="display:none;">
+                        <label>Técnico en Simulación</label>
+                        <input type="text" id="eventTecnicoSim" placeholder="Nombre" value="Lic. Mauricio Castro">
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -1179,11 +1228,12 @@
                 startHour: 8.5,
                 endHour: 14.5,
                 title: 'Taller de PBM (Patient Blood Management)',
-                type: 'taller',
+                type: 'taller-simulacion',
                 location: 'PB y Primer Piso',
                 coordinators: ['Dr. William Baptista'],
                 speakers: [],
-                cupos: 'máx. 25'
+                cupos: 'máx. 25',
+                tecnicoSim: 'Lic. Mauricio Castro'
             },
             // Pre-Congress - Martes 13
             {
@@ -1194,7 +1244,7 @@
                 startHour: 8.5,
                 endHour: 12.5,
                 title: 'Taller de PoCUS en Anestesia Pediátrica',
-                type: 'taller',
+                type: 'taller-habilidades',
                 location: 'PB y Primer Piso',
                 coordinators: ['Dra. Florencia Galarraga'],
                 speakers: ['Dr. Tiago Rossi'],
@@ -1208,7 +1258,7 @@
                 startHour: 14.5,
                 endHour: 18.5,
                 title: 'Taller de PoCUS en Anestesia Pediátrica',
-                type: 'taller',
+                type: 'taller-habilidades',
                 location: 'PB y Primer Piso',
                 coordinators: ['Dra. Florencia Galarraga'],
                 speakers: ['Dr. Tiago Rossi'],
@@ -1328,7 +1378,7 @@
                 startHour: 8.5,
                 endHour: 12.5,
                 title: 'Taller de Anestesia Cardiovascular',
-                type: 'taller',
+                type: 'taller-casos',
                 location: 'Subsuelo',
                 coordinators: ['Dra. Jimena Calviño', 'Dra. Leticia Turconi'],
                 speakers: []
@@ -1341,11 +1391,12 @@
                 startHour: 8.5,
                 endHour: 13,
                 title: 'Simulación Crisis en Adultos',
-                type: 'taller',
+                type: 'taller-simulacion',
                 location: 'PB y Primer Piso',
                 coordinators: ['Dr. William Baptista'],
                 speakers: ['Dr. Rodrigo Rubio'],
-                cupos: 'mín. 6, máx. 12'
+                cupos: 'mín. 6, máx. 12',
+                tecnicoSim: 'Lic. Mauricio Castro'
             },
             {
                 id: 14,
@@ -1355,7 +1406,7 @@
                 startHour: 14.5,
                 endHour: 18.5,
                 title: 'Taller de Anestesia Cardiovascular',
-                type: 'taller',
+                type: 'taller-casos',
                 location: 'Subsuelo',
                 coordinators: ['Dra. Jimena Calviño', 'Dra. Leticia Turconi'],
                 speakers: []
@@ -1368,11 +1419,12 @@
                 startHour: 14,
                 endHour: 18.5,
                 title: 'Simulación Crisis en Adultos',
-                type: 'taller',
+                type: 'taller-simulacion',
                 location: 'PB y Primer Piso',
                 coordinators: ['Dr. William Baptista'],
                 speakers: ['Dr. Rodrigo Rubio'],
-                cupos: 'mín. 6, máx. 12'
+                cupos: 'mín. 6, máx. 12',
+                tecnicoSim: 'Lic. Mauricio Castro'
             },
             // Jueves 15 - Conferencias
             {
@@ -1488,10 +1540,11 @@
                 startHour: 8,
                 endHour: 10,
                 title: 'Taller Serious Game (Sesión 1)',
-                type: 'taller',
+                type: 'taller-simulacion',
                 location: 'Subsuelo',
                 coordinators: ['Dr. Rodrigo Rubio'],
-                speakers: ['Dra. Ana Lila Garduño']
+                speakers: ['Dra. Ana Lila Garduño'],
+                tecnicoSim: 'Lic. Mauricio Castro'
             },
             {
                 id: 25,
@@ -1501,10 +1554,11 @@
                 startHour: 10.5,
                 endHour: 12.5,
                 title: 'Taller Serious Game (Sesión 2)',
-                type: 'taller',
+                type: 'taller-simulacion',
                 location: 'Subsuelo',
                 coordinators: ['Dr. Rodrigo Rubio'],
-                speakers: ['Dra. Ana Lila Garduño']
+                speakers: ['Dra. Ana Lila Garduño'],
+                tecnicoSim: 'Lic. Mauricio Castro'
             },
             {
                 id: 26,
@@ -1514,7 +1568,7 @@
                 startHour: 8.5,
                 endHour: 12.5,
                 title: 'Taller de TIVA',
-                type: 'taller',
+                type: 'taller-habilidades',
                 location: 'PB y Primer Piso',
                 coordinators: ['Dr. Diego Sarasua'],
                 speakers: ['Dr. David Ramírez']
@@ -1527,10 +1581,11 @@
                 startHour: 14,
                 endHour: 16,
                 title: 'Taller Serious Game (Sesión 3)',
-                type: 'taller',
+                type: 'taller-simulacion',
                 location: 'Subsuelo',
                 coordinators: ['Dr. Rodrigo Rubio'],
-                speakers: ['Dra. Ana Lila Garduño']
+                speakers: ['Dra. Ana Lila Garduño'],
+                tecnicoSim: 'Lic. Mauricio Castro'
             },
             {
                 id: 28,
@@ -1540,10 +1595,11 @@
                 startHour: 16.5,
                 endHour: 18.5,
                 title: 'Taller Serious Game (Sesión 4)',
-                type: 'taller',
+                type: 'taller-simulacion',
                 location: 'Subsuelo',
                 coordinators: ['Dr. Rodrigo Rubio'],
-                speakers: ['Dra. Ana Lila Garduño']
+                speakers: ['Dra. Ana Lila Garduño'],
+                tecnicoSim: 'Lic. Mauricio Castro'
             },
             {
                 id: 29,
@@ -1553,10 +1609,11 @@
                 startHour: 14,
                 endHour: 18.5,
                 title: 'Simulación Crítica en Obstetricia',
-                type: 'taller',
+                type: 'taller-simulacion',
                 location: 'PB y Primer Piso',
                 coordinators: ['Dra. Gabriela Castro', 'Dra. Maryana Núñez'],
-                speakers: ['Dr. Mauricio Vasco']
+                speakers: ['Dr. Mauricio Vasco'],
+                tecnicoSim: 'Lic. Mauricio Castro'
             },
             // Viernes 16 - Conferencias
             {
@@ -1659,10 +1716,11 @@
                 startHour: 8,
                 endHour: 13,
                 title: 'Simulación Crítica en Anestesia Regional',
-                type: 'taller',
+                type: 'taller-simulacion',
                 location: 'PB y Primer Piso',
                 coordinators: [],
-                speakers: []
+                speakers: [],
+                tecnicoSim: 'Lic. Mauricio Castro'
             },
             // Talleres Enfermería
             {
@@ -1673,7 +1731,7 @@
                 startHour: 8.5,
                 endHour: 12.5,
                 title: 'Taller de Enfermería (Sesión 1)',
-                type: 'taller',
+                type: 'taller-enfermeria',
                 location: 'Sede SAU',
                 coordinators: ['Dra. Leticia Duarte'],
                 speakers: []
@@ -1686,7 +1744,7 @@
                 startHour: 14.5,
                 endHour: 18.5,
                 title: 'Taller de Enfermería (Sesión 2)',
-                type: 'taller',
+                type: 'taller-enfermeria',
                 location: 'Sede SAU',
                 coordinators: ['Dra. Leticia Duarte'],
                 speakers: []
@@ -1699,7 +1757,7 @@
                 startHour: 8.5,
                 endHour: 12.5,
                 title: 'Taller de Enfermería (Sesión 3)',
-                type: 'taller',
+                type: 'taller-enfermeria',
                 location: 'Sede SAU',
                 coordinators: ['Dra. Leticia Duarte'],
                 speakers: []
@@ -1712,7 +1770,7 @@
                 startHour: 14.5,
                 endHour: 18.5,
                 title: 'Taller de Enfermería (Sesión 4)',
-                type: 'taller',
+                type: 'taller-enfermeria',
                 location: 'Sede SAU',
                 coordinators: ['Dra. Leticia Duarte'],
                 speakers: []
@@ -1850,7 +1908,7 @@
 
             // Update stats
             document.getElementById('statConferencias').textContent = events.filter(e => e.type === 'conferencia').length;
-            document.getElementById('statTalleres').textContent = events.filter(e => e.type === 'taller').length;
+            document.getElementById('statTalleres').textContent = events.filter(e => e.type.startsWith('taller-')).length;
 
             const allSpeakers = new Set();
             events.forEach(e => {
@@ -1908,7 +1966,7 @@
                         if (filterLocation === 'subsuelo' && !loc.includes('subsuelo')) return;
                     }
 
-                    const allPeople = [...(event.coordinators || []), ...(event.speakers || [])].join(' ').toLowerCase();
+                    const allPeople = [...(event.coordinators || []), ...(event.speakers || []), ...(event.instructores || []), ...(event.asistentes || []), event.tecnicoSim || ''].join(' ').toLowerCase();
                     const matchesSpeaker = searchSpeaker === '' || allPeople.includes(searchSpeaker);
 
                     const div = document.createElement('div');
@@ -1941,6 +1999,9 @@
                         <div class="event-speakers">
                             ${(event.coordinators || []).map(c => c ? `<span class="speaker-tag">📋 ${c}</span>` : '').join('')}
                             ${(event.speakers || []).map(s => s ? `<span class="speaker-tag">🎤 ${s}</span>` : '').join('')}
+                            ${(event.instructores || []).map(i => i ? `<span class="speaker-tag">🩺 ${i}</span>` : '').join('')}
+                            ${(event.asistentes || []).map(a => a ? `<span class="speaker-tag">🤝 ${a}</span>` : '').join('')}
+                            ${event.tecnicoSim ? `<span class="speaker-tag">⚙️ ${event.tecnicoSim}</span>` : ''}
                         </div>
                         ${event.cupos ? `<div class="event-details">Cupos: ${event.cupos}</div>` : ''}
                         <div class="mobile-actions">
@@ -2005,7 +2066,10 @@
 
             const typeLabels = {
                 'conferencia': '📚 Conferencia',
-                'taller': '🔧 Taller',
+                'taller-simulacion': '🎭 Taller Simulación',
+                'taller-habilidades': '🔧 Taller Habilidades',
+                'taller-casos': '💬 Taller Discusión de Casos',
+                'taller-enfermeria': '👩‍⚕️ Taller Enfermería',
                 'mesa': '💬 Mesa Redonda',
                 'simposio': '🎯 Simposio',
                 'ceremonia': '🎉 Ceremonia',
@@ -2068,6 +2132,31 @@
                     </div>
                     ` : ''}
 
+                    ${(event.instructores || []).length > 0 ? `
+                    <div class="info-card speakers-card">
+                        <div class="info-label">Instructores</div>
+                        <div class="speaker-list">
+                            ${event.instructores.map(i => `<span class="speaker-chip">🩺 ${i}</span>`).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${(event.asistentes || []).length > 0 ? `
+                    <div class="info-card speakers-card">
+                        <div class="info-label">Instructores Asistentes</div>
+                        <div class="speaker-list">
+                            ${event.asistentes.map(a => `<span class="speaker-chip">🤝 ${a}</span>`).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${event.tecnicoSim ? `
+                    <div class="info-card">
+                        <div class="info-label">Técnico en Simulación</div>
+                        <div class="info-value">⚙️ ${event.tecnicoSim}</div>
+                    </div>
+                    ` : ''}
+
                     ${event.notes ? `
                     <div class="info-card notes-card">
                         <div class="info-label">Observaciones</div>
@@ -2119,6 +2208,18 @@
             document.getElementById('eventCupos').value = event.cupos || '';
             document.getElementById('eventNotes').value = event.notes || '';
 
+            // Populate taller fields
+            const instructores = event.instructores || [];
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById('eventInstructor' + i).value = instructores[i - 1] || '';
+            }
+            const asistentes = event.asistentes || [];
+            for (let i = 1; i <= 4; i++) {
+                document.getElementById('eventAsistente' + i).value = asistentes[i - 1] || '';
+            }
+            document.getElementById('eventTecnicoSim').value = event.tecnicoSim || 'Lic. Mauricio Castro';
+            toggleTallerFields();
+
             document.getElementById('editModal').classList.add('visible');
         }
 
@@ -2132,6 +2233,8 @@
 
             document.getElementById('eventId').value = '';
             document.getElementById('eventForm').reset();
+            document.getElementById('eventTecnicoSim').value = 'Lic. Mauricio Castro';
+            toggleTallerFields();
             document.getElementById('editModal').classList.add('visible');
         }
 
@@ -2171,7 +2274,10 @@
                 coordinators: document.getElementById('eventCoordinators').value.split(',').map(s => s.trim()).filter(s => s),
                 speakers: document.getElementById('eventSpeakers').value.split(',').map(s => s.trim()).filter(s => s),
                 cupos: document.getElementById('eventCupos').value,
-                notes: document.getElementById('eventNotes').value
+                notes: document.getElementById('eventNotes').value,
+                instructores: [1,2,3,4,5,6].map(i => document.getElementById('eventInstructor' + i).value.trim()).filter(s => s),
+                asistentes: [1,2,3,4].map(i => document.getElementById('eventAsistente' + i).value.trim()).filter(s => s),
+                tecnicoSim: document.getElementById('eventType').value === 'taller-simulacion' ? document.getElementById('eventTecnicoSim').value.trim() : ''
             };
 
             if (id) {
@@ -2299,6 +2405,16 @@
             }
             closeMoveModal();
         }
+
+        // Toggle taller fields visibility based on type
+        function toggleTallerFields() {
+            const type = document.getElementById('eventType').value;
+            const isTaller = type.startsWith('taller-');
+            const isSimulacion = type === 'taller-simulacion';
+            document.getElementById('tallerFieldsContainer').style.display = isTaller ? 'block' : 'none';
+            document.getElementById('tecnicoSimGroup').style.display = isSimulacion ? 'block' : 'none';
+        }
+        document.getElementById('eventType').addEventListener('change', toggleTallerFields);
 
         // Event listeners
         document.getElementById('filterType').addEventListener('change', renderSchedule);
