@@ -1835,20 +1835,32 @@
             }
         ];
 
-        // Cloud storage
-        const JSONBLOB_URL = 'https://jsonblob.com/api/jsonBlob/019cfcf3-c551-7ef7-82ab-b44e7c35cc26';
+        // Cloud storage via GitHub API
+        const GH_REPO = 'baptistaw/congreso-anestesiologia-2026';
+        const GH_FILE = 'events.json';
+        const GH_API = `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`;
+        let fileSha = null;
+
+        function getGhToken() {
+            return sessionStorage.getItem('gh_token') || '';
+        }
 
         // Working data - starts with local, then cloud overwrites on load
         let events = JSON.parse(JSON.stringify(originalEvents));
         let editMode = false;
         let nextId = Math.max(...events.map(e => e.id || 0)) + 1;
 
-        // Load latest data from cloud on startup
+        // Load latest data from GitHub on startup
         (async function loadFromCloud() {
             try {
-                const res = await fetch(JSONBLOB_URL);
+                const res = await fetch(GH_API, {
+                    headers: { 'Accept': 'application/vnd.github+json' }
+                });
                 if (res.ok) {
-                    const cloudEvents = await res.json();
+                    const data = await res.json();
+                    fileSha = data.sha;
+                    const content = atob(data.content.replace(/\n/g, ''));
+                    const cloudEvents = JSON.parse(content);
                     if (Array.isArray(cloudEvents) && cloudEvents.length > 0) {
                         events = cloudEvents;
                         nextId = Math.max(...events.map(e => e.id || 0)) + 1;
@@ -1856,7 +1868,7 @@
                     }
                 }
             } catch (e) {
-                console.warn('No se pudo cargar desde la nube, usando datos locales');
+                console.warn('No se pudo cargar desde GitHub, usando datos locales');
             }
         })();
         let draggedEvent = null;
@@ -1887,26 +1899,43 @@
             return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         }
 
-        // Save to cloud
+        // Save to GitHub
+        let saveTimeout = null;
         function saveData() {
-            fetch(JSONBLOB_URL, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(events)
-            }).then(res => {
-                if (res.ok) {
-                    showToast('Cambios guardados en la nube', 'success');
-                } else {
-                    console.error('Error guardando:', res.status, res.statusText);
-                    showToast('Error al guardar (' + res.status + ')', 'warning');
+            // Debounce: wait 2s after last change to avoid spamming GitHub API
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(async () => {
+                try {
+                    const content = btoa(unescape(encodeURIComponent(JSON.stringify(events, null, 2))));
+                    const body = {
+                        message: 'Actualizar programa del congreso',
+                        content: content
+                    };
+                    if (fileSha) body.sha = fileSha;
+
+                    const res = await fetch(GH_API, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${getGhToken()}`,
+                            'Accept': 'application/vnd.github+json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(body)
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        fileSha = data.content.sha;
+                        showToast('Guardado en GitHub ✓', 'success');
+                    } else {
+                        const err = await res.json();
+                        console.error('Error guardando:', err);
+                        showToast('Error al guardar (' + res.status + ')', 'warning');
+                    }
+                } catch (err) {
+                    console.error('Error de red:', err);
+                    showToast('Error al guardar en GitHub', 'warning');
                 }
-            }).catch(err => {
-                console.error('Error de red al guardar:', err);
-                showToast('Error al guardar en la nube', 'warning');
-            });
+            }, 2000);
         }
 
         // Show toast notification
@@ -1925,6 +1954,14 @@
                 if (code !== '1904') {
                     showToast('Código incorrecto', 'warning');
                     return;
+                }
+                if (!getGhToken()) {
+                    const token = prompt('Ingrese el token de GitHub para guardar cambios:');
+                    if (!token) {
+                        showToast('Se necesita token para editar', 'warning');
+                        return;
+                    }
+                    sessionStorage.setItem('gh_token', token);
                 }
             }
             editMode = !editMode;
