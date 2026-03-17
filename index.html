@@ -1891,10 +1891,18 @@
         function saveData() {
             fetch(JSONBLOB_URL, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify(events)
             }).then(res => {
-                if (!res.ok) console.error('Error guardando en la nube');
+                if (res.ok) {
+                    showToast('Cambios guardados en la nube', 'success');
+                } else {
+                    console.error('Error guardando:', res.status, res.statusText);
+                    showToast('Error al guardar (' + res.status + ')', 'warning');
+                }
             }).catch(err => {
                 console.error('Error de red al guardar:', err);
                 showToast('Error al guardar en la nube', 'warning');
