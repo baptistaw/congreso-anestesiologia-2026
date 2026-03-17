@@ -958,19 +958,22 @@
     </div>
 
     <div class="toolbar">
-        <button class="toolbar-btn btn-primary" onclick="toggleEditMode()">
+        <button class="toolbar-btn btn-primary" id="editModeBtn" onclick="toggleEditMode()">
             ✏️ Modo Edición
         </button>
-        <button class="toolbar-btn btn-success" onclick="addNewEvent()">
+        <button class="toolbar-btn btn-warning edit-only" style="display:none" onclick="toggleEditMode()">
+            🔒 Salir de Edición
+        </button>
+        <button class="toolbar-btn btn-success edit-only" style="display:none" onclick="addNewEvent()">
             ➕ Nueva Actividad
         </button>
-        <button class="toolbar-btn btn-secondary" onclick="exportData()">
+        <button class="toolbar-btn btn-secondary edit-only" style="display:none" onclick="exportData()">
             📤 Exportar JSON
         </button>
-        <button class="toolbar-btn btn-secondary" onclick="importData()">
+        <button class="toolbar-btn btn-secondary edit-only" style="display:none" onclick="importData()">
             📥 Importar JSON
         </button>
-        <button class="toolbar-btn btn-warning" onclick="resetData()">
+        <button class="toolbar-btn btn-warning edit-only" style="display:none" onclick="resetData()">
             🔄 Restaurar Original
         </button>
         <button class="toolbar-btn btn-secondary" onclick="window.print()">
@@ -1835,6 +1838,8 @@
             editMode = !editMode;
             document.body.classList.toggle('edit-mode', editMode);
             document.getElementById('editIndicator').classList.toggle('active', editMode);
+            document.getElementById('editModeBtn').style.display = editMode ? 'none' : '';
+            document.querySelectorAll('.edit-only').forEach(btn => btn.style.display = editMode ? '' : 'none');
             renderSchedule();
             showToast(editMode ? 'Modo edición activado' : 'Modo edición desactivado', editMode ? 'success' : 'info');
         }
@@ -2000,10 +2005,10 @@
                     }
 
                     div.innerHTML = `
-                        <div class="event-actions">
+                        ${editMode ? `<div class="event-actions">
                             <button class="event-action-btn btn-edit" onclick="event.stopPropagation(); editEvent(${event.id})" title="Editar">✏️</button>
                             <button class="event-action-btn btn-delete" onclick="event.stopPropagation(); deleteEvent(${event.id})" title="Eliminar">🗑️</button>
-                        </div>
+                        </div>` : ''}
                         ${conflictIndices.has(event._idx) ? '<span class="conflict-badge">!</span>' : ''}
                         <div class="event-time">${event.time}</div>
                         <div class="event-title">${event.title}</div>
@@ -2016,11 +2021,11 @@
                             ${event.tecnicoSim ? `<span class="speaker-tag">⚙️ ${event.tecnicoSim}</span>` : ''}
                         </div>
                         ${event.cupos ? `<div class="event-details">Cupos: ${event.cupos}</div>` : ''}
-                        <div class="mobile-actions">
+                        ${editMode ? `<div class="mobile-actions">
                             <button class="mobile-btn mobile-btn-move" onclick="event.stopPropagation(); openMoveModal(${event.id})">📅 Mover día</button>
                             <button class="mobile-btn mobile-btn-edit" onclick="event.stopPropagation(); editEvent(${event.id})">✏️ Editar</button>
                             <button class="mobile-btn mobile-btn-delete" onclick="event.stopPropagation(); deleteEvent(${event.id})">🗑️ Eliminar</button>
-                        </div>
+                        </div>` : ''}
                     `;
 
                     if (!editMode) {
@@ -2179,7 +2184,7 @@
 
                 <div class="modal-actions" style="margin-top: 25px;">
                     <button class="toolbar-btn btn-secondary" onclick="closeEditModal()">Cerrar</button>
-                    <button class="toolbar-btn btn-primary" onclick="editEvent(${event.id})">✏️ Editar</button>
+                    ${editMode ? `<button class="toolbar-btn btn-primary" onclick="editEvent(${event.id})">✏️ Editar</button>` : ''}
                 </div>
             `;
 
