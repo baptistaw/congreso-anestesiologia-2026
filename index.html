@@ -284,17 +284,6 @@
             cursor: grab;
         }
 
-        .event.draggable > * {
-            pointer-events: none;
-        }
-
-        .event.draggable .event-actions,
-        .event.draggable .event-actions *,
-        .event.draggable .mobile-actions,
-        .event.draggable .mobile-actions * {
-            pointer-events: auto;
-        }
-
         .event.dragging {
             opacity: 0.5;
             cursor: grabbing;
@@ -2008,8 +1997,23 @@
                     if (editMode) {
                         div.draggable = true;
                         div.classList.add('draggable');
-                        div.addEventListener('dragstart', handleDragStart);
-                        div.addEventListener('dragend', handleDragEnd);
+                        div.addEventListener('mousedown', function(e) {
+                            if (e.target.closest('.event-actions') || e.target.closest('.mobile-actions')) return;
+                            this._mouseDownTime = Date.now();
+                        });
+                        div.addEventListener('dragstart', function(e) {
+                            isDragging = true;
+                            draggedEvent = events.find(ev => ev.id == this.dataset.eventId);
+                            this.classList.add('dragging');
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/plain', this.dataset.eventId);
+                            showToast('Arrastrando: ' + draggedEvent.title, 'info');
+                        });
+                        div.addEventListener('dragend', function(e) {
+                            this.classList.remove('dragging');
+                            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                            setTimeout(() => { isDragging = false; }, 100);
+                        });
                     }
 
                     if (conflictIndices.has(event._idx)) {
@@ -2041,7 +2045,11 @@
                     `;
 
                     if (editMode) {
-                        div.onclick = () => { if (!isDragging) editEvent(event.id); };
+                        div.addEventListener('click', function(e) {
+                            if (isDragging) return;
+                            if (e.target.closest('.event-actions') || e.target.closest('.mobile-actions')) return;
+                            editEvent(this.dataset.eventId);
+                        });
                     } else {
                         div.onclick = () => showEventDetails(event);
                     }
