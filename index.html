@@ -223,10 +223,20 @@
             overflow-x: auto;
         }
 
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: rgba(255,255,255,0.8);
+            padding: 10px 5px 8px;
+            margin-top: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+        }
+
         .schedule-grid {
             display: grid;
             gap: 15px;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            margin-bottom: 20px;
         }
 
         .day-column {
@@ -1106,7 +1116,10 @@
     </div>
 
     <div class="main-container">
-        <div class="schedule-grid" id="scheduleGrid"></div>
+        <div class="section-title" id="sectionPre">Pre-Congreso</div>
+        <div class="schedule-grid" id="scheduleGridPre"></div>
+        <div class="section-title" id="sectionCongreso">Congreso</div>
+        <div class="schedule-grid" id="scheduleGridCongreso"></div>
     </div>
 
     <!-- Edit Modal -->
@@ -1985,9 +1998,14 @@
             return { minHour: Math.floor(min), maxHour: Math.ceil(max) };
         }
 
+        const preCongressDays = ['sabado', 'domingo', 'lunes', 'martes'];
+        const congressDays = ['miercoles', 'jueves', 'viernes'];
+
         function renderSchedule() {
-            const grid = document.getElementById('scheduleGrid');
-            grid.innerHTML = '';
+            const gridPre = document.getElementById('scheduleGridPre');
+            const gridCongreso = document.getElementById('scheduleGridCongreso');
+            gridPre.innerHTML = '';
+            gridCongreso.innerHTML = '';
 
             const filterType = document.getElementById('filterType').value;
             const filterDay = document.getElementById('filterDay').value;
@@ -2195,8 +2213,17 @@
 
                 content.appendChild(eventsArea);
                 column.appendChild(content);
-                grid.appendChild(column);
+
+                if (preCongressDays.includes(day)) {
+                    gridPre.appendChild(column);
+                } else {
+                    gridCongreso.appendChild(column);
+                }
             });
+
+            // Hide section titles if empty
+            document.getElementById('sectionPre').style.display = gridPre.children.length ? '' : 'none';
+            document.getElementById('sectionCongreso').style.display = gridCongreso.children.length ? '' : 'none';
         }
 
         // Drag and drop handlers
