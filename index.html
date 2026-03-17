@@ -253,8 +253,8 @@
         .day-domingo { background: linear-gradient(90deg, #d299c2, #fef9d7); color: #333; }
 
         .day-content {
-            padding: 10px;
-            min-height: 300px;
+            position: relative;
+            padding: 0;
         }
 
         .day-content.drag-over {
@@ -262,18 +262,57 @@
             border: 2px dashed #38ef7d;
         }
 
-        .event {
-            margin-bottom: 10px;
-            padding: 12px;
-            border-radius: 8px;
+        .time-gutter {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 42px;
+            height: 100%;
+            border-right: 1px solid rgba(255,255,255,0.1);
+            z-index: 1;
+        }
+
+        .hour-marker {
+            position: absolute;
+            left: 0;
+            width: 42px;
+            font-size: 0.6rem;
+            color: rgba(255,255,255,0.4);
+            text-align: right;
+            padding-right: 5px;
+            transform: translateY(-50%);
+        }
+
+        .hour-line {
+            position: absolute;
+            left: 42px;
+            right: 0;
+            height: 0;
+            border-top: 1px dashed rgba(255,255,255,0.07);
+        }
+
+        .events-area {
             position: relative;
-            transition: transform 0.2s, box-shadow 0.2s;
+            margin-left: 45px;
+            margin-right: 5px;
+        }
+
+        .event {
+            padding: 6px 8px;
+            border-radius: 6px;
+            position: absolute;
+            overflow: hidden;
             cursor: pointer;
+            z-index: 2;
+            box-sizing: border-box;
+            border: 1px solid rgba(255,255,255,0.15);
+            transition: z-index 0s, box-shadow 0.2s;
         }
 
         .event:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            z-index: 20;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+            overflow: visible;
         }
 
         .event.hidden {
@@ -290,16 +329,17 @@
         }
 
         .event-time {
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             font-weight: bold;
             opacity: 0.9;
-            margin-bottom: 5px;
+            margin-bottom: 2px;
         }
 
         .event-title {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             font-weight: 600;
-            margin-bottom: 6px;
+            margin-bottom: 3px;
+            line-height: 1.2;
         }
 
         .event-details {
@@ -414,26 +454,9 @@
         }
 
         .event.has-conflict {
-            border: 4px solid #ff0040;
-            box-shadow: 0 0 25px rgba(255, 0, 64, 0.7), inset 0 0 20px rgba(255, 0, 64, 0.15);
+            border: 3px solid #ff0040;
+            box-shadow: 0 0 15px rgba(255, 0, 64, 0.7), inset 0 0 10px rgba(255, 0, 64, 0.15);
             animation: conflictPulse 1.5s infinite;
-            position: relative;
-        }
-
-        .event.has-conflict::before {
-            content: '⚠️ CONFLICTO DE HORARIO';
-            position: absolute;
-            top: -28px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #ff0040;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            white-space: nowrap;
-            z-index: 10;
         }
 
         @keyframes conflictPulse {
@@ -635,6 +658,24 @@
             .event-actions {
                 position: static;
                 display: none !important;
+            }
+
+            .time-gutter {
+                width: 32px;
+            }
+
+            .hour-marker {
+                font-size: 0.5rem;
+                width: 32px;
+                padding-right: 3px;
+            }
+
+            .hour-line {
+                left: 32px;
+            }
+
+            .events-area {
+                margin-left: 35px;
             }
 
             .edit-mode .mobile-actions {
@@ -1888,6 +1929,62 @@
         }
 
         // Render schedule
+        const PIXELS_PER_HOUR = 70;
+
+        function assignTracks(sortedEvents) {
+            if (sortedEvents.length === 0) return;
+            // Build overlap clusters
+            const clusters = [];
+            let cluster = [sortedEvents[0]];
+            let clusterEnd = sortedEvents[0].endHour;
+
+            for (let i = 1; i < sortedEvents.length; i++) {
+                const ev = sortedEvents[i];
+                if (ev.startHour < clusterEnd) {
+                    cluster.push(ev);
+                    clusterEnd = Math.max(clusterEnd, ev.endHour);
+                } else {
+                    clusters.push(cluster);
+                    cluster = [ev];
+                    clusterEnd = ev.endHour;
+                }
+            }
+            clusters.push(cluster);
+
+            // Assign tracks within each cluster
+            clusters.forEach(group => {
+                const tracks = [];
+                group.forEach(ev => {
+                    let placed = false;
+                    for (let t = 0; t < tracks.length; t++) {
+                        const lastInTrack = tracks[t];
+                        if (ev.startHour >= lastInTrack.endHour) {
+                            ev._track = t;
+                            tracks[t] = ev;
+                            placed = true;
+                            break;
+                        }
+                    }
+                    if (!placed) {
+                        ev._track = tracks.length;
+                        tracks.push(ev);
+                    }
+                });
+                const totalTracks = tracks.length;
+                group.forEach(ev => ev._totalTracks = totalTracks);
+            });
+        }
+
+        function getDayTimeRange(dayEvents) {
+            if (dayEvents.length === 0) return { minHour: 8, maxHour: 20 };
+            let min = Infinity, max = -Infinity;
+            dayEvents.forEach(ev => {
+                if (ev.startHour < min) min = ev.startHour;
+                if (ev.endHour > max) max = ev.endHour;
+            });
+            return { minHour: Math.floor(min), maxHour: Math.ceil(max) };
+        }
+
         function renderSchedule() {
             const grid = document.getElementById('scheduleGrid');
             grid.innerHTML = '';
@@ -1958,9 +2055,45 @@
                 header.textContent = dayLabels[day];
                 column.appendChild(header);
 
+                // Filter events for this day
+                dayEvents.sort((a, b) => a.startHour - b.startHour);
+                const visibleEvents = dayEvents.filter(event => {
+                    if (filterType !== 'all') {
+                        if (filterType === 'talleres') {
+                            if (!event.type.startsWith('taller-')) return false;
+                        } else if (event.type !== filterType) return false;
+                    }
+                    if (filterLocation !== 'all') {
+                        const loc = (event.location || '').toLowerCase();
+                        if (filterLocation === 'salon' && !loc.includes('salón') && !loc.includes('salon')) return false;
+                        if (filterLocation === 'pb' && !loc.includes('pb') && !loc.includes('piso')) return false;
+                        if (filterLocation === 'subsuelo' && !loc.includes('subsuelo')) return false;
+                    }
+                    const allPeople = [...(event.coordinators || []), ...(event.speakers || []), ...(event.instructores || []), ...(event.asistentes || []), event.tecnicoSim || ''].join(' ').toLowerCase();
+                    if (searchSpeaker !== '' && !allPeople.includes(searchSpeaker)) return false;
+                    return true;
+                });
+
+                if (visibleEvents.length === 0 && !editMode) return;
+
+                // Assign tracks for overlapping events
+                assignTracks(visibleEvents);
+                const { minHour, maxHour } = getDayTimeRange(visibleEvents);
+                const totalHeight = (maxHour - minHour) * PIXELS_PER_HOUR;
+
+                const column = document.createElement('div');
+                column.className = 'day-column';
+                column.dataset.day = day;
+
+                const header = document.createElement('div');
+                header.className = `day-header day-${day}`;
+                header.textContent = dayLabels[day];
+                column.appendChild(header);
+
                 const content = document.createElement('div');
                 content.className = 'day-content';
                 content.dataset.day = day;
+                content.style.height = totalHeight + 'px';
 
                 if (editMode) {
                     content.addEventListener('dragover', handleDragOver);
@@ -1968,31 +2101,45 @@
                     content.addEventListener('dragleave', handleDragLeave);
                 }
 
-                dayEvents.sort((a, b) => a.startHour - b.startHour);
+                // Time gutter and hour lines
+                const gutter = document.createElement('div');
+                gutter.className = 'time-gutter';
+                for (let h = minHour; h <= maxHour; h++) {
+                    const marker = document.createElement('div');
+                    marker.className = 'hour-marker';
+                    marker.style.top = ((h - minHour) * PIXELS_PER_HOUR) + 'px';
+                    marker.textContent = h.toString().padStart(2, '0') + ':00';
+                    gutter.appendChild(marker);
 
-                dayEvents.forEach(event => {
-                    if (filterType !== 'all') {
-                        if (filterType === 'talleres') {
-                            if (!event.type.startsWith('taller-')) return;
-                        } else if (event.type !== filterType) return;
+                    if (h < maxHour) {
+                        const line = document.createElement('div');
+                        line.className = 'hour-line';
+                        line.style.top = ((h - minHour) * PIXELS_PER_HOUR) + 'px';
+                        content.appendChild(line);
                     }
+                }
+                content.appendChild(gutter);
 
-                    if (filterLocation !== 'all') {
-                        const loc = (event.location || '').toLowerCase();
-                        if (filterLocation === 'salon' && !loc.includes('salón') && !loc.includes('salon')) return;
-                        if (filterLocation === 'pb' && !loc.includes('pb') && !loc.includes('piso')) return;
-                        if (filterLocation === 'subsuelo' && !loc.includes('subsuelo')) return;
-                    }
+                // Events area
+                const eventsArea = document.createElement('div');
+                eventsArea.className = 'events-area';
+                eventsArea.style.height = totalHeight + 'px';
 
-                    const allPeople = [...(event.coordinators || []), ...(event.speakers || []), ...(event.instructores || []), ...(event.asistentes || []), event.tecnicoSim || ''].join(' ').toLowerCase();
-                    const matchesSpeaker = searchSpeaker === '' || allPeople.includes(searchSpeaker);
-
+                visibleEvents.forEach(event => {
                     const div = document.createElement('div');
                     div.className = `event event-${event.type}`;
                     div.dataset.eventId = event.id;
 
-                    if (!matchesSpeaker) div.classList.add('hidden');
-                    if (searchSpeaker && matchesSpeaker) div.classList.add('speaker-highlight');
+                    // Position based on time and track
+                    const top = (event.startHour - minHour) * PIXELS_PER_HOUR;
+                    const height = Math.max((event.endHour - event.startHour) * PIXELS_PER_HOUR, 25);
+                    const trackWidth = 100 / (event._totalTracks || 1);
+                    const left = (event._track || 0) * trackWidth;
+
+                    div.style.top = top + 'px';
+                    div.style.height = height + 'px';
+                    div.style.left = left + '%';
+                    div.style.width = trackWidth + '%';
 
                     if (editMode) {
                         div.draggable = true;
@@ -2053,9 +2200,10 @@
                         div.onclick = () => showEventDetails(event);
                     }
 
-                    content.appendChild(div);
+                    eventsArea.appendChild(div);
                 });
 
+                content.appendChild(eventsArea);
                 column.appendChild(content);
                 grid.appendChild(column);
             });
