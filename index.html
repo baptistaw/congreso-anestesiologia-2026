@@ -2028,7 +2028,9 @@
                         </div>` : ''}
                     `;
 
-                    if (!editMode) {
+                    if (editMode) {
+                        div.onclick = () => editEvent(event.id);
+                    } else {
                         div.onclick = () => showEventDetails(event);
                     }
 
