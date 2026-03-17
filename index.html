@@ -284,6 +284,17 @@
             cursor: grab;
         }
 
+        .event.draggable > * {
+            pointer-events: none;
+        }
+
+        .event.draggable .event-actions,
+        .event.draggable .event-actions *,
+        .event.draggable .mobile-actions,
+        .event.draggable .mobile-actions * {
+            pointer-events: auto;
+        }
+
         .event.dragging {
             opacity: 0.5;
             cursor: grabbing;
