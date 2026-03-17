@@ -987,10 +987,11 @@
             <select id="filterType">
                 <option value="all">Todos</option>
                 <option value="conferencia">Conferencias</option>
-                <option value="taller-simulacion">Talleres: Simulación</option>
-                <option value="taller-habilidades">Talleres: Habilidades</option>
-                <option value="taller-casos">Talleres: Discusión de Casos</option>
-                <option value="taller-enfermeria">Talleres: Enfermería</option>
+                <option value="talleres">Todos los Talleres</option>
+                <option value="taller-simulacion">  ↳ Simulación</option>
+                <option value="taller-habilidades">  ↳ Habilidades</option>
+                <option value="taller-casos">  ↳ Discusión de Casos</option>
+                <option value="taller-enfermeria">  ↳ Enfermería</option>
                 <option value="mesa">Mesas Redondas</option>
                 <option value="simposio">Simposios</option>
                 <option value="ceremonia">Ceremonias</option>
@@ -1957,7 +1958,11 @@
                 dayEvents.sort((a, b) => a.startHour - b.startHour);
 
                 dayEvents.forEach(event => {
-                    if (filterType !== 'all' && event.type !== filterType) return;
+                    if (filterType !== 'all') {
+                        if (filterType === 'talleres') {
+                            if (!event.type.startsWith('taller-')) return;
+                        } else if (event.type !== filterType) return;
+                    }
 
                     if (filterLocation !== 'all') {
                         const loc = (event.location || '').toLowerCase();
