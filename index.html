@@ -2046,13 +2046,17 @@
         // Drag and drop handlers
         function handleDragStart(e) {
             isDragging = true;
-            draggedEvent = events.find(ev => ev.id == e.target.dataset.eventId);
-            e.target.classList.add('dragging');
+            const eventDiv = e.target.closest('.event');
+            if (!eventDiv) return;
+            draggedEvent = events.find(ev => ev.id == eventDiv.dataset.eventId);
+            eventDiv.classList.add('dragging');
             e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', eventDiv.dataset.eventId);
         }
 
         function handleDragEnd(e) {
-            e.target.classList.remove('dragging');
+            const eventDiv = e.target.closest('.event') || e.target;
+            eventDiv.classList.remove('dragging');
             document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
             setTimeout(() => { isDragging = false; }, 100);
         }
