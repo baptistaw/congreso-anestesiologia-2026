@@ -1835,32 +1835,20 @@
             }
         ];
 
-        // Cloud storage via GitHub API
-        const GH_REPO = 'baptistaw/congreso-anestesiologia-2026';
-        const GH_FILE = 'events.json';
-        const GH_API = `https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`;
-        let fileSha = null;
+        // Cloud storage via Cloudflare Worker
+        const API_URL = 'https://congresosau-api.contacto-f4a.workers.dev/events';
 
-        function getGhToken() {
-            return sessionStorage.getItem('gh_token') || '';
-        }
-
-        // Working data - starts with local, then cloud overwrites on load
+        // Working data
         let events = JSON.parse(JSON.stringify(originalEvents));
         let editMode = false;
         let nextId = Math.max(...events.map(e => e.id || 0)) + 1;
 
-        // Load latest data from GitHub on startup
+        // Load latest data from cloud on startup
         (async function loadFromCloud() {
             try {
-                const res = await fetch(GH_API, {
-                    headers: { 'Accept': 'application/vnd.github+json' }
-                });
+                const res = await fetch(API_URL);
                 if (res.ok) {
-                    const data = await res.json();
-                    fileSha = data.sha;
-                    const content = atob(data.content.replace(/\n/g, ''));
-                    const cloudEvents = JSON.parse(content);
+                    const cloudEvents = await res.json();
                     if (Array.isArray(cloudEvents) && cloudEvents.length > 0) {
                         events = cloudEvents;
                         nextId = Math.max(...events.map(e => e.id || 0)) + 1;
@@ -1868,7 +1856,7 @@
                     }
                 }
             } catch (e) {
-                console.warn('No se pudo cargar desde GitHub, usando datos locales');
+                console.warn('No se pudo cargar desde la nube, usando datos locales');
             }
         })();
         let draggedEvent = null;
@@ -1899,41 +1887,25 @@
             return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         }
 
-        // Save to GitHub
+        // Save to cloud
         let saveTimeout = null;
         function saveData() {
-            // Debounce: wait 2s after last change to avoid spamming GitHub API
             clearTimeout(saveTimeout);
             saveTimeout = setTimeout(async () => {
                 try {
-                    const content = btoa(unescape(encodeURIComponent(JSON.stringify(events, null, 2))));
-                    const body = {
-                        message: 'Actualizar programa del congreso',
-                        content: content
-                    };
-                    if (fileSha) body.sha = fileSha;
-
-                    const res = await fetch(GH_API, {
+                    const res = await fetch(API_URL, {
                         method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${getGhToken()}`,
-                            'Accept': 'application/vnd.github+json',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(body)
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(events)
                     });
                     if (res.ok) {
-                        const data = await res.json();
-                        fileSha = data.content.sha;
-                        showToast('Guardado en GitHub ✓', 'success');
+                        showToast('Guardado', 'success');
                     } else {
-                        const err = await res.json();
-                        console.error('Error guardando:', err);
                         showToast('Error al guardar (' + res.status + ')', 'warning');
                     }
                 } catch (err) {
                     console.error('Error de red:', err);
-                    showToast('Error al guardar en GitHub', 'warning');
+                    showToast('Error al guardar', 'warning');
                 }
             }, 2000);
         }
@@ -1954,14 +1926,6 @@
                 if (code !== '1904') {
                     showToast('Código incorrecto', 'warning');
                     return;
-                }
-                if (!getGhToken()) {
-                    const token = prompt('Ingrese el token de GitHub para guardar cambios:');
-                    if (!token) {
-                        showToast('Se necesita token para editar', 'warning');
-                        return;
-                    }
-                    sessionStorage.setItem('gh_token', token);
                 }
             }
             editMode = !editMode;
@@ -2608,36 +2572,6 @@
             a.download = 'programa-congreso-2026.json';
             a.click();
             showToast('Datos exportados', 'success');
-        }
-
-        // Download updated HTML with current data baked into originalEvents
-        function downloadUpdatedHTML() {
-            const html = document.documentElement.outerHTML;
-            // Find and replace the originalEvents array in the source
-            const marker1 = 'const originalEvents = [';
-            const marker2 = '];\n\n        // Working data';
-            const idx1 = html.indexOf(marker1);
-            const idx2 = html.indexOf(marker2, idx1);
-            if (idx1 === -1 || idx2 === -1) {
-                showToast('Error: no se pudo actualizar el HTML', 'warning');
-                return;
-            }
-            const newEventsStr = JSON.stringify(events, null, 12)
-                .replace(/^\[/, '')
-                .replace(/\]$/, '')
-                .replace(/^            /gm, '            ');
-            const updatedHTML = '<!DOCTYPE html>\n<html lang="es">\n' +
-                html.substring(html.indexOf('<head>'), idx1) +
-                marker1 + '\n' + newEventsStr + '\n        ' +
-                html.substring(idx2);
-            const blob = new Blob([updatedHTML], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'index.html';
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('HTML actualizado descargado', 'success');
         }
 
         // Import data
