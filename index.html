@@ -1945,7 +1945,13 @@
             const speakerSchedule = {};
 
             events.forEach((event, idx) => {
-                const allPeople = [...(event.coordinators || []), ...(event.speakers || [])];
+                const _seen = new Set();
+                const allPeople = [...(event.coordinators || []), ...(event.speakers || [])].filter(p => {
+                    if (!p || !p.trim()) return false;
+                    const k = p.toLowerCase().trim();
+                    if (_seen.has(k)) return false;
+                    _seen.add(k); return true;
+                });
                 allPeople.forEach(person => {
                     if (!person || person === '') return;
                     const key = person.toLowerCase().trim();
@@ -1963,7 +1969,7 @@
                         const e1 = schedule[i].event;
                         const e2 = schedule[j].event;
 
-                        if (e1.day === e2.day) {
+                        if (e1.id !== e2.id && e1.day === e2.day) {
                             if (!(e1.endHour <= e2.startHour || e2.endHour <= e1.startHour)) {
                                 conflicts.push({
                                     person,
