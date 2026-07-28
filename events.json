@@ -87,9 +87,15 @@
   "speakers": [],
   "cupos": "máx. 25",
   "notes": "Cierre de inscripciones: 12 de setiembre.",
-  "instructores": [],
+  "instructores": [
+   "Dra. Maryana Nuñez",
+   "Dr. Manuel Da Fonte",
+   "Dra. Jessica Vega",
+   "Dr. Gustavo Grecco",
+   "Dra Nathalia Araujo"
+  ],
   "asistentes": [],
-  "tecnicoSim": ""
+  "tecnicoSim": "Lic. Mauricio Castro"
  },
  {
   "id": 6,
@@ -105,7 +111,7 @@
    "Dra. Florencia Galarraga"
   ],
   "speakers": [],
-  "cupos": "",
+  "cupos": "máx. 25",
   "notes": "",
   "instructores": [],
   "asistentes": [],
@@ -125,7 +131,7 @@
    "Dra. Florencia Galarraga"
   ],
   "speakers": [],
-  "cupos": "",
+  "cupos": "máx. 25",
   "notes": "",
   "instructores": [],
   "asistentes": [],
@@ -340,11 +346,15 @@
    "Dr. William Baptista"
   ],
   "speakers": [],
-  "cupos": "",
+  "cupos": "mín. 6, máx. 12",
   "notes": "",
-  "instructores": [],
+  "instructores": [
+   "Dr. Marcos Schioppi",
+   "Dra. Laura  Cebriá",
+   "Dr. Manuel Da Fonte"
+  ],
   "asistentes": [],
-  "tecnicoSim": ""
+  "tecnicoSim": "Lic. Mauricio Castro"
  },
  {
   "id": 18,
@@ -360,11 +370,13 @@
    "Dr. William Baptista"
   ],
   "speakers": [],
-  "cupos": "",
+  "cupos": "mín. 6, máx. 12",
   "notes": "",
-  "instructores": [],
+  "instructores": [
+   "Dra. Paola Alcarraz"
+  ],
   "asistentes": [],
-  "tecnicoSim": ""
+  "tecnicoSim": "Lic. Mauricio Castro"
  },
  {
   "id": 19,
@@ -577,7 +589,7 @@
   "notes": "",
   "instructores": [],
   "asistentes": [],
-  "tecnicoSim": ""
+  "tecnicoSim": "Lic. Mauricio Castro"
  },
  {
   "id": 29,
@@ -597,7 +609,7 @@
   "notes": "",
   "instructores": [],
   "asistentes": [],
-  "tecnicoSim": ""
+  "tecnicoSim": "Lic. Mauricio Castro"
  },
  {
   "id": 30,
@@ -617,7 +629,7 @@
   "notes": "",
   "instructores": [],
   "asistentes": [],
-  "tecnicoSim": ""
+  "tecnicoSim": "Lic. Mauricio Castro"
  },
  {
   "id": 31,
@@ -637,7 +649,7 @@
   "notes": "",
   "instructores": [],
   "asistentes": [],
-  "tecnicoSim": ""
+  "tecnicoSim": "Lic. Mauricio Castro"
  },
  {
   "id": 32,
@@ -657,7 +669,7 @@
   "notes": "",
   "instructores": [],
   "asistentes": [],
-  "tecnicoSim": ""
+  "tecnicoSim": "Lic. Mauricio Castro"
  },
  {
   "id": 33,
@@ -811,7 +823,7 @@
   "notes": "",
   "instructores": [],
   "asistentes": [],
-  "tecnicoSim": ""
+  "tecnicoSim": "Lic. Mauricio Castro"
  },
  {
   "id": 41,
