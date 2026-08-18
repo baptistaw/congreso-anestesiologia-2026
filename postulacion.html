@@ -48,7 +48,14 @@
   .t-falta{background:var(--alertabg);color:var(--alerta)}
   .t-ok{background:var(--okbg);color:var(--ok)}
   .t-form{background:var(--formbg);color:var(--form)}
+  .desc{font-size:13.5px;color:#3f4650;margin-top:9px;padding-top:9px;border-top:1px solid var(--linea)}
+  .equipo{font-size:12.5px;color:var(--gris);margin-top:8px}
+  .equipo b{color:var(--azul2);font-weight:700}
+  .equipo span{display:block;margin-top:2px}
   .perfil{font-size:12.5px;color:var(--gris);margin-top:8px;padding-top:8px;border-top:1px dashed var(--linea)}
+  .perfil b{color:var(--azul2)}
+  .vermas{display:inline-block;margin-top:7px;font-size:13px;font-weight:700;
+    color:var(--acento);cursor:pointer;user-select:none}
   .extra{margin-top:11px;padding-top:11px;border-top:1px solid var(--linea)}
   .radios{display:flex;gap:8px;margin-bottom:9px;flex-wrap:wrap}
   .radios label{flex:1;min-width:130px;margin:0;font-weight:600;font-size:13.5px;
@@ -197,6 +204,8 @@ function pintarAsignados() {
     <div class="conf" id="c${t.id}">
       <div class="tit">${esc(t.title)}</div>
       <div class="meta">${esc(t.dayLabel)} · ${esc(t.time || 'horario a confirmar')} · ${esc(t.location)}</div>
+      ${t.descripcion ? `<div class="desc">${esc(recortar(t.descripcion))}</div>` : ''}
+      ${equipoHTML(t)}
       <div class="bts">
         <button type="button" onclick="marcar(${t.id},'confirmado')">Confirmo</button>
         <button type="button" onclick="marcar(${t.id},'no_puede')">No puedo</button>
@@ -215,6 +224,29 @@ function marcar(id, estado) {
   b[0].className = estado === 'confirmado' ? 'on-si' : '';
   b[1].className = estado === 'no_puede' ? 'on-no' : '';
   $('m' + id).classList.toggle('oculto', estado !== 'no_puede');
+}
+
+/* ── descripción y equipo ────────────────────────────── */
+const recortar = d => d.length > 190 ? d.slice(0, 190).replace(/\s+\S*$/, '') + '…' : d;
+function verMas(id) {
+  const t = talleres.find(e => e.id === id);
+  const d = $('d' + id), v = $('v' + id);
+  const abierto = d.dataset.abierto === '1';
+  d.textContent = abierto ? recortar(t.descripcion) : t.descripcion;
+  d.dataset.abierto = abierto ? '0' : '1';
+  v.textContent = abierto ? 'Ver más' : 'Ver menos';
+}
+function equipoHTML(t) {
+  const lim = a => (a || []).map(x => String(x).replace(/\s*\(invitado\)\s*/i, '').trim()).filter(Boolean);
+  const co = lim(t.coordinators), ins = lim(t.instructores), inv = lim(t.speakers);
+  if (!co.length && !ins.length && !inv.length && !t.tecnicoSim) return '';
+  return `<div class="equipo">
+    ${co.length ? `<span><b>Coordina:</b> ${esc(co.join(' · '))}</span>` : ''}
+    ${inv.length ? `<span><b>Invitado:</b> ${esc(inv.join(' · '))}</span>` : ''}
+    ${ins.length ? `<span><b>Ya están:</b> ${esc(ins.join(' · '))}</span>`
+                 : `<span><b>Instructores:</b> todavía nadie asignado</span>`}
+    ${t.tecnicoSim ? `<span><b>Técnico:</b> ${esc(t.tecnicoSim)}</span>` : ''}
+  </div>`;
 }
 
 /* ── paso 3: postularse ──────────────────────────────── */
@@ -238,7 +270,12 @@ function pintarTalleres() {
           <span class="tag t-form">${t.cuposFormacion} lugares de formación</span>
         </label>
       </div>
-      ${t.perfil ? `<div class="perfil">${esc(t.perfil)}</div>` : ''}
+      ${t.descripcion ? `
+        <div class="desc" id="d${t.id}">${esc(recortar(t.descripcion))}</div>
+        ${t.descripcion.length > 190 ? `<span class="vermas" onclick="verMas(${t.id})" id="v${t.id}">Ver más</span>` : ''}
+      ` : ''}
+      ${equipoHTML(t)}
+      ${t.perfil ? `<div class="perfil"><b>Perfil buscado:</b> ${esc(t.perfil)}</div>` : ''}
       <div class="extra oculto" id="x${t.id}">
         <label>¿Cómo te sumás?</label>
         <div class="radios" id="r${t.id}">
