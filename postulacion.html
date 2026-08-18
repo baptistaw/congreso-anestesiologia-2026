@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Talleres de Simulación · Congreso 2026</title>
+<style>
+  :root{
+    --azul:#1f3864; --azul2:#2e5c8a; --acento:#0563c1;
+    --ok:#1e7a4a; --okbg:#e4f5ec; --alerta:#b3261e; --alertabg:#fdecea;
+    --form:#8a5a00; --formbg:#fff6e0;
+    --txt:#22262b; --gris:#6b7280; --linea:#e3e6ea; --fondo:#f6f7f9;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--fondo);color:var(--txt);
+    font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:620px;margin:0 auto;padding:0 16px 120px}
+  header{background:linear-gradient(135deg,var(--azul),var(--azul2));color:#fff;padding:22px 16px 20px}
+  header .in{max-width:620px;margin:0 auto}
+  h1{margin:0 0 4px;font-size:19px;letter-spacing:.2px}
+  header p{margin:0;font-size:13px;opacity:.85}
+  .paso{margin:20px 0 10px;font-size:12px;font-weight:700;letter-spacing:.9px;
+    text-transform:uppercase;color:var(--azul2)}
+  .card{background:#fff;border:1px solid var(--linea);border-radius:14px;padding:16px;margin-bottom:12px}
+  label{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
+  .hint{font-size:13px;color:var(--gris);margin:-2px 0 10px}
+  input[type=text],input[type=email],select,textarea{
+    width:100%;padding:13px 12px;font-size:16px;font-family:inherit;color:var(--txt);
+    border:1.5px solid var(--linea);border-radius:10px;background:#fff}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acento)}
+  textarea{min-height:64px;resize:vertical}
+  .btn{display:block;width:100%;padding:15px;font-size:16px;font-weight:700;font-family:inherit;
+    border:0;border-radius:12px;cursor:pointer;background:var(--azul2);color:#fff}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn.sec{background:#fff;color:var(--azul2);border:1.5px solid var(--azul2)}
+  .barra{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--linea);
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));z-index:20}
+  .barra .in{max-width:620px;margin:0 auto}
+  .oculto{display:none}
+
+  .taller{border:1.5px solid var(--linea);border-radius:12px;padding:13px;margin-bottom:10px;background:#fff}
+  .taller.sel{border-color:var(--acento);background:#f2f8fe}
+  .taller .fila{display:flex;gap:11px;align-items:flex-start}
+  .taller input[type=checkbox]{width:22px;height:22px;margin:1px 0 0;flex:0 0 auto;accent-color:var(--acento)}
+  .tit{font-weight:700;font-size:15px;line-height:1.3}
+  .meta{font-size:13px;color:var(--gris);margin-top:3px}
+  .tag{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;margin-top:7px}
+  .t-falta{background:var(--alertabg);color:var(--alerta)}
+  .t-ok{background:var(--okbg);color:var(--ok)}
+  .t-form{background:var(--formbg);color:var(--form)}
+  .perfil{font-size:12.5px;color:var(--gris);margin-top:8px;padding-top:8px;border-top:1px dashed var(--linea)}
+  .extra{margin-top:11px;padding-top:11px;border-top:1px solid var(--linea)}
+  .radios{display:flex;gap:8px;margin-bottom:9px;flex-wrap:wrap}
+  .radios label{flex:1;min-width:130px;margin:0;font-weight:600;font-size:13.5px;
+    border:1.5px solid var(--linea);border-radius:9px;padding:9px 10px;cursor:pointer;background:#fff}
+  .radios label.on{border-color:var(--acento);background:#eaf3fd;color:var(--azul)}
+  .radios input{margin-right:6px;accent-color:var(--acento)}
+
+  .conf{border:1.5px solid var(--linea);border-radius:12px;padding:13px;margin-bottom:10px;background:#fff}
+  .conf.si{border-color:var(--ok);background:var(--okbg)}
+  .conf.no{border-color:var(--alerta);background:var(--alertabg)}
+  .conf .bts{display:flex;gap:8px;margin-top:10px}
+  .conf .bts button{flex:1;padding:11px;font-size:14px;font-weight:700;font-family:inherit;
+    border:1.5px solid var(--linea);background:#fff;border-radius:9px;cursor:pointer;color:var(--txt)}
+  .conf .bts button.on-si{background:var(--ok);border-color:var(--ok);color:#fff}
+  .conf .bts button.on-no{background:var(--alerta);border-color:var(--alerta);color:#fff}
+
+  .aviso{background:#fff8e1;border:1px solid #f3e0a8;border-radius:11px;padding:12px;
+    font-size:13.5px;margin-bottom:12px}
+  .error{background:var(--alertabg);border:1px solid #f3c2bd;color:var(--alerta);
+    border-radius:11px;padding:12px;font-size:14px;margin-bottom:12px}
+  .fin{text-align:center;padding:40px 10px}
+  .fin .tic{font-size:52px}
+  .fin h2{margin:12px 0 8px;color:var(--azul)}
+  .fin p{color:var(--gris);font-size:15px}
+  .resumen{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:14px;
+    margin:18px 0;text-align:left;font-size:14px}
+  .resumen li{margin-bottom:5px}
+  .cargando{text-align:center;padding:60px 20px;color:var(--gris)}
+  .sp{width:26px;height:26px;border:3px solid var(--linea);border-top-color:var(--azul2);
+    border-radius:50%;animation:g .8s linear infinite;margin:0 auto 14px}
+  @keyframes g{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<header><div class="in">
+  <h1>Talleres de Simulación · Congreso 2026</h1>
+  <p>Confirmá los talleres que ya tenés asignados y postulate a los que quieras sumarte.</p>
+</div></header>
+
+<div class="wrap">
+  <div id="cargando" class="cargando"><div class="sp"></div>Cargando talleres…</div>
+  <div id="err" class="error oculto"></div>
+
+  <!-- PASO 1 -->
+  <section id="p1" class="oculto">
+    <div class="paso">Paso 1 de 3 · Quién sos</div>
+    <div class="card">
+      <label for="nombre">Nombre y apellido</label>
+      <div class="hint">Si ya estás en algún taller, escribilo igual que figura y te lo reconoce.</div>
+      <input type="text" id="nombre" list="conocidos" autocomplete="name" placeholder="Ej: Marcos Schioppi">
+      <datalist id="conocidos"></datalist>
+    </div>
+    <div class="card">
+      <label for="contacto">Teléfono o mail</label>
+      <div class="hint">Para poder contactarte por los detalles del taller.</div>
+      <input type="text" id="contacto" autocomplete="tel" placeholder="099 123 456">
+    </div>
+  </section>
+
+  <!-- PASO 2 -->
+  <section id="p2" class="oculto">
+    <div class="paso">Paso 2 de 3 · Lo que ya tenés asignado</div>
+    <div id="asignados"></div>
+  </section>
+
+  <!-- PASO 3 -->
+  <section id="p3" class="oculto">
+    <div class="paso">Paso 3 de 3 · Postulate a otros talleres</div>
+    <div class="aviso">
+      <b>Los talleres con equipo completo también aceptan gente.</b> Cada uno tiene
+      2 lugares de formación: vas como observador, acompañás a un instructor titular
+      y participás del briefing y del debriefing. Cuenta como formación continua del Centro.
+    </div>
+    <div id="talleres"></div>
+  </section>
+
+  <!-- FIN -->
+  <section id="fin" class="oculto fin">
+    <div class="tic">✅</div>
+    <h2>Listo, quedó registrado</h2>
+    <p>Te vamos a escribir para confirmarte los detalles.</p>
+    <div id="resumen" class="resumen"></div>
+    <button class="btn sec" onclick="location.reload()">Cargar otra persona</button>
+  </section>
+</div>
+
+<div class="barra oculto" id="barra"><div class="in">
+  <button class="btn" id="accion">Siguiente</button>
+</div></div>
+
+<script>
+const API = 'https://congresosau-api.contacto-f4a.workers.dev/events';
+let talleres = [], paso = 1, yo = '', contacto = '';
+const conf = {};   // idEvento -> {estado, motivo}
+const post = {};   // idEvento -> {rol, experiencia}
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = s => String(s || '').toLowerCase()
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/\b(dr|dra|lic|prof)\.?\s*/g, '').replace(/\s+/g, ' ').trim();
+
+/* ── carga ───────────────────────────────────────────── */
+async function cargar() {
+  try {
+    const r = await fetch(API + '?t=' + Date.now());
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const ev = await r.json();
+    talleres = ev.filter(e => e.abiertoPostulacion);
+    if (!talleres.length) throw new Error('No hay talleres abiertos por ahora.');
+
+    const nombres = new Set();
+    ev.forEach(e => [...(e.coordinators||[]), ...(e.instructores||[]), ...(e.asistentes||[])]
+      .forEach(n => n && nombres.add(n.replace(/\s*\(.*?\)\s*/g, '').trim())));
+    $('conocidos').innerHTML = [...nombres].sort()
+      .map(n => `<option value="${esc(n)}">`).join('');
+
+    $('cargando').classList.add('oculto');
+    $('p1').classList.remove('oculto');
+    $('barra').classList.remove('oculto');
+  } catch (e) {
+    $('cargando').classList.add('oculto');
+    mostrarError('No se pudieron cargar los talleres. Revisá la conexión y volvé a intentar. (' + e.message + ')');
+  }
+}
+function mostrarError(m) { $('err').textContent = m; $('err').classList.remove('oculto'); }
+function limpiarError() { $('err').classList.add('oculto'); }
+
+/* ── paso 2: lo asignado ─────────────────────────────── */
+function mios() {
+  const n = norm(yo);
+  if (!n) return [];
+  return talleres.filter(t => [...(t.instructores||[]), ...(t.coordinators||[])]
+    .some(p => { const q = norm(p); return q === n || q.includes(n) || n.includes(q); }));
+}
+function pintarAsignados() {
+  const lista = mios();
+  if (!lista.length) {
+    $('asignados').innerHTML = `<div class="card">No figurás en ningún taller todavía.
+      Pasá al siguiente paso y postulate a los que te interesen.</div>`;
+    return;
+  }
+  $('asignados').innerHTML = lista.map(t => `
+    <div class="conf" id="c${t.id}">
+      <div class="tit">${esc(t.title)}</div>
+      <div class="meta">${esc(t.dayLabel)} · ${esc(t.time || 'horario a confirmar')} · ${esc(t.location)}</div>
+      <div class="bts">
+        <button type="button" onclick="marcar(${t.id},'confirmado')">Confirmo</button>
+        <button type="button" onclick="marcar(${t.id},'no_puede')">No puedo</button>
+      </div>
+      <div id="m${t.id}" class="extra oculto">
+        <label>¿Por qué no podés? (opcional)</label>
+        <input type="text" oninput="conf[${t.id}].motivo=this.value" placeholder="Ej: estoy de guardia">
+      </div>
+    </div>`).join('');
+}
+function marcar(id, estado) {
+  conf[id] = { estado, motivo: (conf[id] || {}).motivo || '' };
+  const c = $('c' + id);
+  c.className = 'conf ' + (estado === 'confirmado' ? 'si' : 'no');
+  const b = c.querySelectorAll('.bts button');
+  b[0].className = estado === 'confirmado' ? 'on-si' : '';
+  b[1].className = estado === 'no_puede' ? 'on-no' : '';
+  $('m' + id).classList.toggle('oculto', estado !== 'no_puede');
+}
+
+/* ── paso 3: postularse ──────────────────────────────── */
+function pintarTalleres() {
+  const ya = new Set(mios().map(t => t.id));
+  const libres = talleres.filter(t => !ya.has(t.id));
+  const orden = { lunes:1, martes:2, miercoles:3, jueves:4, viernes:5, sabado:6, domingo:7 };
+  libres.sort((a, b) => (b.faltan > 0) - (a.faltan > 0)
+    || (orden[a.day]||9) - (orden[b.day]||9) || a.startHour - b.startHour);
+
+  $('talleres').innerHTML = libres.map(t => {
+    const falta = t.faltan > 0;
+    return `
+    <div class="taller" id="t${t.id}">
+      <div class="fila">
+        <input type="checkbox" id="k${t.id}" onchange="toggle(${t.id},this.checked)">
+        <label for="k${t.id}" style="margin:0;flex:1;cursor:pointer">
+          <span class="tit">${esc(t.title)}</span>
+          <div class="meta">${esc(t.dayLabel)} · ${esc(t.time || 'horario a confirmar')}<br>${esc(t.location)}</div>
+          <span class="tag ${falta ? 't-falta' : 't-ok'}">${falta ? 'Faltan ' + t.faltan : 'Equipo completo'}</span>
+          <span class="tag t-form">${t.cuposFormacion} lugares de formación</span>
+        </label>
+      </div>
+      ${t.perfil ? `<div class="perfil">${esc(t.perfil)}</div>` : ''}
+      <div class="extra oculto" id="x${t.id}">
+        <label>¿Cómo te sumás?</label>
+        <div class="radios" id="r${t.id}">
+          ${falta ? `<label onclick="rol(${t.id},'instructor')">
+            <input type="radio" name="rol${t.id}" value="instructor">Como instructor</label>` : ''}
+          <label onclick="rol(${t.id},'formacion')">
+            <input type="radio" name="rol${t.id}" value="formacion">En formación (observador)</label>
+        </div>
+        <label>¿Tenés experiencia previa en este taller o en el tema?</label>
+        <textarea oninput="post[${t.id}].experiencia=this.value"
+          placeholder="Ej: hice VORTEX dos veces como instructor / es mi primera vez"></textarea>
+      </div>
+    </div>`;
+  }).join('') || `<div class="card">Ya estás en todos los talleres abiertos.</div>`;
+}
+function toggle(id, on) {
+  $('t' + id).classList.toggle('sel', on);
+  $('x' + id).classList.toggle('oculto', !on);
+  if (on) {
+    const t = talleres.find(e => e.id === id);
+    post[id] = { rol: t.faltan > 0 ? 'instructor' : 'formacion', experiencia: '' };
+    const r = $('r' + id).querySelector('input');
+    if (r) { r.checked = true; r.closest('label').classList.add('on'); }
+  } else delete post[id];
+}
+function rol(id, v) {
+  if (!post[id]) return;
+  post[id].rol = v;
+  $('r' + id).querySelectorAll('label').forEach(l =>
+    l.classList.toggle('on', l.querySelector('input').value === v));
+}
+
+/* ── envío, con reintentos para no pisar a otro ──────── */
+async function enviar() {
+  const b = $('accion');
+  b.disabled = true; b.textContent = 'Enviando…';
+  limpiarError();
+  const sello = new Date().toISOString();
+
+  for (let intento = 1; intento <= 4; intento++) {
+    try {
+      const r = await fetch(API + '?t=' + Date.now());
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const ev = await r.json();
+
+      ev.forEach(e => {
+        if (conf[e.id]) {
+          e.confirmaciones = (e.confirmaciones || []).filter(c => norm(c.nombre) !== norm(yo));
+          e.confirmaciones.push({ nombre: yo, contacto,
+            estado: conf[e.id].estado, motivo: conf[e.id].motivo || '', fecha: sello });
+        }
+        if (post[e.id]) {
+          e.postulaciones = (e.postulaciones || []).filter(p => norm(p.nombre) !== norm(yo));
+          e.postulaciones.push({ nombre: yo, contacto, rol: post[e.id].rol,
+            experiencia: post[e.id].experiencia || '', fecha: sello });
+        }
+      });
+
+      const put = await fetch(API, { method: 'PUT',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ev) });
+      if (!put.ok) throw new Error('HTTP ' + put.status);
+
+      // verificar que quedó guardado
+      await new Promise(s => setTimeout(s, 1200));
+      const v = await (await fetch(API + '?t=' + Date.now())).json();
+      const ids = [...Object.keys(conf), ...Object.keys(post)].map(Number);
+      const ok = ids.every(id => {
+        const e = v.find(x => x.id === id);
+        if (!e) return false;
+        return (e.confirmaciones || []).some(c => c.fecha === sello)
+            || (e.postulaciones || []).some(p => p.fecha === sello);
+      });
+      if (ok) return terminar();
+      if (intento === 4) throw new Error('no se pudo confirmar el guardado');
+      await new Promise(s => setTimeout(s, 800 * intento));
+    } catch (e) {
+      if (intento === 4) {
+        mostrarError('No se pudo guardar. Probá de nuevo en un momento, o escribile a William. (' + e.message + ')');
+        b.disabled = false; b.textContent = 'Reintentar';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      await new Promise(s => setTimeout(s, 800 * intento));
+    }
+  }
+}
+function terminar() {
+  const li = [];
+  Object.entries(conf).forEach(([id, c]) => {
+    const t = talleres.find(e => e.id === +id);
+    li.push(`<li>${c.estado === 'confirmado' ? '✅ Confirmaste' : '❌ Avisaste que no podés en'}: ${esc(t.title)}</li>`);
+  });
+  Object.entries(post).forEach(([id, p]) => {
+    const t = talleres.find(e => e.id === +id);
+    li.push(`<li>${p.rol === 'formacion' ? '🎓 En formación' : '🙋 Como instructor'}: ${esc(t.title)}</li>`);
+  });
+  $('resumen').innerHTML = li.length ? '<ul>' + li.join('') + '</ul>' : 'Sin cambios.';
+  ['p1','p2','p3','barra'].forEach(x => $(x).classList.add('oculto'));
+  $('fin').classList.remove('oculto');
+  window.scrollTo(0, 0);
+}
+
+/* ── navegación ──────────────────────────────────────── */
+$('accion').addEventListener('click', () => {
+  limpiarError();
+  if (paso === 1) {
+    yo = $('nombre').value.trim();
+    contacto = $('contacto').value.trim();
+    if (yo.length < 4) return mostrarError('Escribí tu nombre y apellido.');
+    if (!contacto) return mostrarError('Dejanos un teléfono o mail para poder contactarte.');
+    pintarAsignados();
+    $('p1').classList.add('oculto');
+    $('p2').classList.remove('oculto');
+    paso = 2;
+    $('accion').textContent = 'Siguiente';
+  } else if (paso === 2) {
+    const pend = mios().filter(t => !conf[t.id]);
+    if (pend.length) return mostrarError('Marcá "Confirmo" o "No puedo" en los ' + pend.length + ' taller(es) que ya tenés asignados.');
+    pintarTalleres();
+    $('p2').classList.add('oculto');
+    $('p3').classList.remove('oculto');
+    paso = 3;
+    $('accion').textContent = 'Enviar';
+  } else {
+    if (!Object.keys(conf).length && !Object.keys(post).length)
+      return mostrarError('Elegí al menos un taller antes de enviar.');
+    enviar();
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+cargar();
+</script>
+</body>
+</html>

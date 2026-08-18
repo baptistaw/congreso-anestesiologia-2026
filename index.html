@@ -2447,6 +2447,31 @@
                     </div>
                     ` : ''}
 
+                    ${(event.confirmaciones || []).length > 0 ? `
+                    <div class="info-card speakers-card">
+                        <div class="info-label">Confirmaciones recibidas</div>
+                        <div class="speaker-list">
+                            ${event.confirmaciones.map(c => `<span class="speaker-chip">${c.estado === 'confirmado' ? '✅' : '❌'} ${c.nombre}${c.motivo ? ' — ' + c.motivo : ''}</span>`).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${(event.postulaciones || []).length > 0 ? `
+                    <div class="info-card speakers-card">
+                        <div class="info-label">Postulaciones (${event.postulaciones.length})</div>
+                        <div class="speaker-list">
+                            ${event.postulaciones.map(p => `<span class="speaker-chip">${p.rol === 'formacion' ? '🎓' : '🙋'} ${p.nombre}${p.contacto ? ' · ' + p.contacto : ''}${p.experiencia ? ' · ' + p.experiencia : ''}</span>`).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${event.abiertoPostulacion ? `
+                    <div class="info-card">
+                        <div class="info-label">Cobertura</div>
+                        <div class="info-value">${event.faltan > 0 ? `⚠️ faltan ${event.faltan} de ${event.requeridos}` : `✅ equipo completo (${event.requeridos})`} · ${event.cuposFormacion} lugares de formación</div>
+                    </div>
+                    ` : ''}
+
                     ${event.notes ? `
                     <div class="info-card notes-card">
                         <div class="info-label">Observaciones</div>
@@ -2574,7 +2599,9 @@
                 const idx = events.findIndex(e => e.id == id);
                 if (idx !== -1) {
                     eventData.id = parseInt(id);
-                    events[idx] = eventData;
+                    // Preservar campos que el formulario no maneja (postulaciones,
+                    // confirmaciones, requeridos, etc.) para no borrarlos al editar.
+                    events[idx] = { ...events[idx], ...eventData };
                 }
             } else {
                 eventData.id = nextId++;
