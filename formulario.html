@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Formulario · Congreso 2026</title>
+<style>
+  :root{
+    --azul:#1f3864; --azul2:#2e5c8a; --acento:#0563c1;
+    --ok:#1e7a4a; --alerta:#b3261e; --alertabg:#fdecea;
+    --txt:#22262b; --gris:#6b7280; --linea:#e3e6ea; --fondo:#f6f7f9;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--fondo);color:var(--txt);
+    font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:620px;margin:0 auto;padding:0 16px 120px}
+  header{background:linear-gradient(135deg,var(--azul),var(--azul2));color:#fff;padding:22px 16px 20px}
+  header .in{max-width:620px;margin:0 auto}
+  h1{margin:0 0 4px;font-size:19px;letter-spacing:.2px}
+  header p{margin:0;font-size:13px;opacity:.85}
+  .card{background:#fff;border:1px solid var(--linea);border-radius:14px;padding:16px;margin-bottom:12px}
+  label.q{display:block;font-weight:600;font-size:15px;margin-bottom:4px}
+  label.q .req{color:var(--alerta)}
+  .hint{font-size:13px;color:var(--gris);margin:0 0 9px}
+  input[type=text],input[type=email],select,textarea{
+    width:100%;padding:13px 12px;font-size:16px;font-family:inherit;color:var(--txt);
+    border:1.5px solid var(--linea);border-radius:10px;background:#fff}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acento)}
+  textarea{min-height:80px;resize:vertical}
+  .opts{display:flex;flex-direction:column;gap:8px}
+  .opts label{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500;
+    border:1.5px solid var(--linea);border-radius:10px;padding:11px 12px;cursor:pointer;background:#fff;margin:0}
+  .opts label.on{border-color:var(--acento);background:#eaf3fd;color:var(--azul)}
+  .opts input{width:20px;height:20px;margin:0;accent-color:var(--acento)}
+  .btn{display:block;width:100%;padding:15px;font-size:16px;font-weight:700;font-family:inherit;
+    border:0;border-radius:12px;cursor:pointer;background:var(--azul2);color:#fff}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn.sec{background:#fff;color:var(--azul2);border:1.5px solid var(--azul2)}
+  .barra{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--linea);
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));z-index:20}
+  .barra .in{max-width:620px;margin:0 auto}
+  .oculto{display:none}
+  .error{background:var(--alertabg);border:1px solid #f3c2bd;color:var(--alerta);
+    border-radius:11px;padding:12px;font-size:14px;margin-bottom:12px}
+  .aviso{background:#fff8e1;border:1px solid #f3e0a8;border-radius:11px;padding:14px;
+    font-size:14px;margin:14px 0}
+  .fin{text-align:center;padding:44px 12px}
+  .fin .tic{font-size:52px}
+  .fin h2{margin:12px 0 8px;color:var(--azul)}
+  .fin p{color:var(--gris);font-size:15px}
+  .cargando{text-align:center;padding:60px 20px;color:var(--gris)}
+  .sp{width:26px;height:26px;border:3px solid var(--linea);border-top-color:var(--azul2);
+    border-radius:50%;animation:g .8s linear infinite;margin:0 auto 14px}
+  @keyframes g{to{transform:rotate(360deg)}}
+  .invalid{border-color:var(--alerta)!important}
+</style>
+</head>
+<body>
+
+<header><div class="in">
+  <h1 id="hTitle">Formulario</h1>
+  <p>XXIV Congreso Uruguayo de Anestesiología · 2026</p>
+</div></header>
+
+<div class="wrap">
+  <div id="cargando" class="cargando"><div class="sp"></div>Cargando…</div>
+  <div id="err" class="error oculto"></div>
+
+  <section id="form" class="oculto">
+    <div id="desc" class="aviso oculto"></div>
+    <div id="campos"></div>
+  </section>
+
+  <section id="fin" class="oculto fin">
+    <div class="tic">✅</div>
+    <h2>¡Listo! Quedó registrado</h2>
+    <p>Gracias por completar el formulario.</p>
+    <button class="btn sec" style="max-width:320px;margin:22px auto 0" onclick="location.reload()">Enviar otra respuesta</button>
+  </section>
+</div>
+
+<div class="barra oculto" id="barra"><div class="in">
+  <button class="btn" id="enviar">Enviar</button>
+</div></div>
+
+<script>
+const KV_BASE = 'https://congresosau-api.contacto-f4a.workers.dev/kv/';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+let form = null;
+const formId = new URLSearchParams(location.search).get('f');
+
+async function kvGet(key){
+  const r = await fetch(KV_BASE + key + '?t=' + Date.now());
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return await r.json();
+}
+
+function fatal(msg){
+  $('cargando').classList.add('oculto');
+  $('err').textContent = msg;
+  $('err').classList.remove('oculto');
+}
+
+async function cargar(){
+  if (!formId) return fatal('Link inválido: falta el identificador del formulario.');
+  try {
+    const forms = (await kvGet('forms')) || [];
+    form = (Array.isArray(forms) ? forms : []).find(f => f.id === formId);
+    if (!form) return fatal('No encontramos este formulario. Puede que haya sido eliminado.');
+    if (!form.open) return fatal('Este formulario está cerrado y ya no acepta respuestas.');
+
+    document.title = form.title + ' · Congreso 2026';
+    $('hTitle').textContent = form.title;
+    if (form.description) {
+      $('desc').textContent = form.description;
+      $('desc').classList.remove('oculto');
+    }
+    $('campos').innerHTML = (form.fields || []).map(pintarCampo).join('');
+    // wire opciones (radios/checkboxes highlight)
+    document.querySelectorAll('.opts').forEach(g => g.addEventListener('change', () => {
+      g.querySelectorAll('label').forEach(l => l.classList.toggle('on', l.querySelector('input').checked));
+    }));
+    $('cargando').classList.add('oculto');
+    $('form').classList.remove('oculto');
+    $('barra').classList.remove('oculto');
+  } catch (e) {
+    fatal('No se pudo cargar el formulario. Revisá la conexión y reintentá. (' + e.message + ')');
+  }
+}
+
+function pintarCampo(f){
+  const req = f.required ? ' <span class="req">*</span>' : '';
+  const hint = f.hint ? `<div class="hint">${esc(f.hint)}</div>` : '';
+  let control = '';
+  if (f.type === 'textarea') {
+    control = `<textarea data-fid="${f.id}"></textarea>`;
+  } else if (f.type === 'email') {
+    control = `<input type="email" data-fid="${f.id}" placeholder="nombre@correo.com">`;
+  } else if (f.type === 'yesno') {
+    control = `<div class="opts" data-fid="${f.id}" data-kind="radio">
+      <label><input type="radio" name="${f.id}" value="Sí"> Sí</label>
+      <label><input type="radio" name="${f.id}" value="No"> No</label></div>`;
+  } else if (f.type === 'select') {
+    control = `<select data-fid="${f.id}"><option value="">Elegí una opción…</option>
+      ${(f.options||[]).map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}</select>`;
+  } else if (f.type === 'multiselect') {
+    control = `<div class="opts" data-fid="${f.id}" data-kind="check">
+      ${(f.options||[]).map(o => `<label><input type="checkbox" value="${esc(o)}"> ${esc(o)}</label>`).join('')}</div>`;
+  } else {
+    control = `<input type="text" data-fid="${f.id}">`;
+  }
+  return `<div class="card"><label class="q">${esc(f.label)}${req}</label>${hint}${control}</div>`;
+}
+
+function leerValor(f){
+  const node = document.querySelector('[data-fid="'+f.id+'"]');
+  if (!node) return '';
+  if (f.type === 'yesno') {
+    const c = node.querySelector('input:checked'); return c ? c.value : '';
+  }
+  if (f.type === 'multiselect') {
+    return [...node.querySelectorAll('input:checked')].map(i => i.value);
+  }
+  return node.value.trim();
+}
+function marcarInvalido(f, bad){
+  const node = document.querySelector('[data-fid="'+f.id+'"]');
+  if (node && node.classList) node.classList.toggle('invalid', bad);
+}
+
+async function enviar(){
+  const b = $('enviar');
+  $('err').classList.add('oculto');
+  const answers = {};
+  let firstBad = null;
+  for (const f of (form.fields || [])) {
+    const v = leerValor(f);
+    const vacio = Array.isArray(v) ? !v.length : !String(v).trim();
+    marcarInvalido(f, false);
+    if (f.required && vacio) { if (!firstBad) firstBad = f; marcarInvalido(f, true); }
+    if (f.type === 'email' && !vacio && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) {
+      if (!firstBad) firstBad = f; marcarInvalido(f, true);
+    }
+    answers[f.id] = v;
+  }
+  if (firstBad) {
+    $('err').textContent = 'Revisá el campo "' + firstBad.label + '".';
+    $('err').classList.remove('oculto');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
+  b.disabled = true; b.textContent = 'Enviando…';
+  const resp = { id: uid('r'), at: new Date().toISOString(), answers };
+  const key = 'resp_' + form.id;
+
+  for (let intento = 1; intento <= 4; intento++) {
+    try {
+      const cur = (await kvGet(key)) || [];
+      const list = Array.isArray(cur) ? cur : [];
+      list.push(resp);
+      const put = await fetch(KV_BASE + key, { method:'PUT',
+        headers:{'Content-Type':'application/json'}, body:JSON.stringify(list) });
+      if (!put.ok) throw new Error('HTTP ' + put.status);
+      // verificar
+      await new Promise(s => setTimeout(s, 1000));
+      const v = await kvGet(key);
+      if (Array.isArray(v) && v.some(x => x.id === resp.id)) return terminar();
+      if (intento === 4) throw new Error('no se pudo confirmar el guardado');
+      await new Promise(s => setTimeout(s, 700 * intento));
+    } catch (e) {
+      if (intento === 4) {
+        $('err').textContent = 'No se pudo guardar. Probá de nuevo en un momento. (' + e.message + ')';
+        $('err').classList.remove('oculto');
+        b.disabled = false; b.textContent = 'Reintentar';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      await new Promise(s => setTimeout(s, 700 * intento));
+    }
+  }
+}
+function terminar(){
+  $('form').classList.add('oculto');
+  $('barra').classList.add('oculto');
+  $('fin').classList.remove('oculto');
+  window.scrollTo(0, 0);
+}
+
+$('enviar').addEventListener('click', enviar);
+cargar();
+</script>
+</body>
+</html>

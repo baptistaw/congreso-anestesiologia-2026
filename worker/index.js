@@ -10,32 +10,51 @@ export default {
       return new Response(null, { headers: cors });
     }
 
+    const json = (obj, status = 200) => new Response(
+      typeof obj === 'string' ? obj : JSON.stringify(obj),
+      { status, headers: { ...cors, 'Content-Type': 'application/json' } }
+    );
+
     const url = new URL(request.url);
 
+    // ── Programa: key fija "events", validada como array ──────────────
     if (url.pathname === '/events') {
       if (request.method === 'GET') {
         const data = await env.EVENTS.get('events', 'text');
-        return new Response(data || '[]', {
-          headers: { ...cors, 'Content-Type': 'application/json' }
-        });
+        return json(data || '[]');
       }
-
       if (request.method === 'PUT') {
         const body = await request.text();
-        // Validate it's valid JSON array
         try {
-          const parsed = JSON.parse(body);
-          if (!Array.isArray(parsed)) throw new Error('Not an array');
+          if (!Array.isArray(JSON.parse(body))) throw new Error('Not an array');
         } catch (e) {
-          return new Response(JSON.stringify({ error: 'Invalid JSON array' }), {
-            status: 400,
-            headers: { ...cors, 'Content-Type': 'application/json' }
-          });
+          return json({ error: 'Invalid JSON array' }, 400);
         }
         await env.EVENTS.put('events', body);
-        return new Response(JSON.stringify({ ok: true }), {
-          headers: { ...cors, 'Content-Type': 'application/json' }
-        });
+        return json({ ok: true });
+      }
+    }
+
+    // ── KV genérico: /kv/<key> — GET/PUT de cualquier JSON válido ──────
+    // Habilita formularios (key "forms" y "resp_<formId>") y reutilización
+    // futura de la plataforma. Key restringida a [A-Za-z0-9_-].
+    const m = url.pathname.match(/^\/kv\/([A-Za-z0-9_-]{1,120})$/);
+    if (m) {
+      const key = 'kv_' + m[1];
+      if (request.method === 'GET') {
+        const data = await env.EVENTS.get(key, 'text');
+        return json(data || 'null');
+      }
+      if (request.method === 'PUT') {
+        const body = await request.text();
+        try {
+          JSON.parse(body);
+        } catch (e) {
+          return json({ error: 'Invalid JSON' }, 400);
+        }
+        if (body.length > 900000) return json({ error: 'Too large' }, 413);
+        await env.EVENTS.put(key, body);
+        return json({ ok: true });
       }
     }
 

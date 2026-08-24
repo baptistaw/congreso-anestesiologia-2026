@@ -914,7 +914,79 @@
             gap: 10px;
             margin-top: 20px;
             justify-content: flex-end;
+            flex-wrap: wrap;
         }
+
+        /* Export / forms checkbox grid */
+        .check-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 6px 14px;
+        }
+        .check-grid label {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.9rem;
+            opacity: 0.95;
+            cursor: pointer;
+            margin: 0;
+        }
+        .check-grid label input {
+            width: auto;
+            margin: 0;
+        }
+
+        /* Forms manager list */
+        .form-item {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+        }
+        .form-item h4 { margin: 0 0 4px; color: #fff; font-size: 1.05rem; }
+        .form-item .form-meta { font-size: 0.82rem; opacity: 0.6; margin-bottom: 10px; }
+        .form-item .form-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+        .form-item .form-btns button {
+            font-size: 0.82rem; padding: 7px 11px; border-radius: 7px; border: none;
+            cursor: pointer; color: #fff; background: rgba(255,255,255,0.12);
+        }
+        .form-item .form-btns button:hover { background: rgba(255,255,255,0.22); }
+        .badge-open { display:inline-block; font-size:0.72rem; padding:2px 8px; border-radius:999px;
+            background:#1e7a4a; color:#fff; margin-left:8px; }
+        .badge-closed { display:inline-block; font-size:0.72rem; padding:2px 8px; border-radius:999px;
+            background:#b3261e; color:#fff; margin-left:8px; }
+
+        /* Field editor rows */
+        .field-row {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 9px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .field-row .field-top { display: flex; gap: 8px; align-items: center; }
+        .field-row .field-top input[type=text] { flex: 1; }
+        .field-row select, .field-row input[type=text] {
+            padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1); color: #fff; font-size: 0.85rem;
+        }
+        .field-row .field-opts { margin-top: 8px; font-size: 0.8rem; opacity: 0.85; }
+        .field-row .field-del {
+            background: rgba(233,69,96,0.25); border: none; color: #fff; cursor: pointer;
+            border-radius: 6px; padding: 8px 10px; font-size: 0.9rem;
+        }
+        .field-row label.inline { display:inline-flex; align-items:center; gap:6px; font-size:0.8rem; opacity:0.85; margin:0; }
+        .field-row label.inline input { width:auto; }
+
+        /* Responses table */
+        .resp-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+        .resp-table th, .resp-table td {
+            border: 1px solid rgba(255,255,255,0.15); padding: 7px 9px; text-align: left; vertical-align: top;
+        }
+        .resp-table th { background: rgba(255,255,255,0.08); position: sticky; top: 0; }
+        .resp-table tr:nth-child(even) td { background: rgba(255,255,255,0.03); }
 
         .stats-panel {
             display: grid;
@@ -1027,8 +1099,11 @@
         <button class="toolbar-btn btn-warning edit-only" style="display:none" onclick="resetData()">
             🔄 Restaurar Original
         </button>
-        <button class="toolbar-btn btn-secondary" onclick="window.print()">
-            🖨️ Imprimir / PDF
+        <button class="toolbar-btn btn-success edit-only" style="display:none" onclick="openFormsManager()">
+            📝 Formularios
+        </button>
+        <button class="toolbar-btn btn-secondary" onclick="openExportModal()">
+            📊 Exportar (Excel / PDF)
         </button>
         <div class="edit-mode-indicator" id="editIndicator">
             ✏️ MODO EDICIÓN ACTIVO
@@ -1267,6 +1342,94 @@
     </div>
 
     <input type="file" id="fileInput" style="display: none" accept=".json">
+
+    <!-- Export Modal -->
+    <div class="modal" id="exportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📊 Exportar cronograma</h2>
+                <button class="modal-close" onclick="closeExportModal()">&times;</button>
+            </div>
+            <p style="opacity:.75;font-size:.9rem;margin-top:-8px">Elegí qué incluir y descargá en Excel o PDF listo para imprimir.</p>
+            <div class="form-group">
+                <label>Días <a href="#" onclick="toggleAllChecks('exp-day',true);return false" style="color:#4facfe">todos</a> · <a href="#" onclick="toggleAllChecks('exp-day',false);return false" style="color:#4facfe">ninguno</a></label>
+                <div class="check-grid" id="exportDays"></div>
+            </div>
+            <div class="form-group">
+                <label>Tipos de actividad <a href="#" onclick="toggleAllChecks('exp-type',true);return false" style="color:#4facfe">todos</a> · <a href="#" onclick="toggleAllChecks('exp-type',false);return false" style="color:#4facfe">ninguno</a></label>
+                <div class="check-grid" id="exportTypes"></div>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="expTeam" checked style="width:auto;margin-right:8px"> Incluir equipo asignado (coordinadores, instructores, ponentes)</label>
+            </div>
+            <div class="modal-actions">
+                <button class="toolbar-btn btn-secondary" onclick="closeExportModal()">Cancelar</button>
+                <button class="toolbar-btn btn-success" onclick="exportPDF()">📄 PDF (imprimir)</button>
+                <button class="toolbar-btn btn-success" onclick="exportExcel()">📗 Excel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forms Manager Modal -->
+    <div class="modal" id="formsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📝 Formularios</h2>
+                <button class="modal-close" onclick="closeFormsManager()">&times;</button>
+            </div>
+            <p style="opacity:.75;font-size:.9rem;margin-top:-8px">Creá formularios (inscripción, postulación, encuestas). Cada uno tiene su link para compartir y guarda sus respuestas en la nube.</p>
+            <div class="modal-actions" style="justify-content:flex-start;margin-top:0">
+                <button class="toolbar-btn btn-success" onclick="editForm(null)">➕ Nuevo formulario</button>
+            </div>
+            <div id="formsList" style="margin-top:16px"></div>
+        </div>
+    </div>
+
+    <!-- Form Editor Modal -->
+    <div class="modal" id="formEditModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="formEditTitle">Nuevo formulario</h2>
+                <button class="modal-close" onclick="closeFormEditor()">&times;</button>
+            </div>
+            <input type="hidden" id="formId">
+            <div class="form-group">
+                <label>Título del formulario</label>
+                <input type="text" id="formTitle" placeholder="Ej: Inscripción Curso RCP 2026">
+            </div>
+            <div class="form-group">
+                <label>Descripción / instrucciones (opcional)</label>
+                <textarea id="formDesc" placeholder="Texto que ve la persona arriba del formulario."></textarea>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="formOpen" checked style="width:auto;margin-right:8px"> Formulario abierto (acepta respuestas)</label>
+            </div>
+            <div class="form-group">
+                <label>Preguntas / campos</label>
+                <div id="formFields"></div>
+                <button type="button" class="toolbar-btn btn-secondary" style="margin-top:10px" onclick="addField()">➕ Agregar campo</button>
+            </div>
+            <div class="modal-actions">
+                <button class="toolbar-btn btn-secondary" onclick="closeFormEditor()">Cancelar</button>
+                <button class="toolbar-btn btn-success" onclick="saveForm()">💾 Guardar formulario</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Responses Modal -->
+    <div class="modal" id="formRespModal">
+        <div class="modal-content" style="max-width:820px">
+            <div class="modal-header">
+                <h2 id="formRespTitle">Respuestas</h2>
+                <button class="modal-close" onclick="closeFormResp()">&times;</button>
+            </div>
+            <div class="modal-actions" style="justify-content:flex-start;margin-top:0">
+                <button class="toolbar-btn btn-secondary" onclick="refreshResponses()">🔄 Actualizar</button>
+                <button class="toolbar-btn btn-success" onclick="exportResponsesExcel()">📗 Excel</button>
+            </div>
+            <div id="formRespBody" style="margin-top:16px;overflow-x:auto"></div>
+        </div>
+    </div>
 
     <!-- Move Modal (Mobile) -->
     <div class="move-modal-overlay" id="moveOverlay" onclick="closeMoveModal()"></div>
@@ -2745,6 +2908,391 @@
         });
         document.getElementById('importModal').addEventListener('click', e => {
             if (e.target.id === 'importModal') closeImportModal();
+        });
+
+        /* ═══════════════════════════════════════════════════════════════
+           EXPORTACIÓN — Excel (.xls sin librerías) y PDF (ventana imprimible)
+           ═══════════════════════════════════════════════════════════════ */
+        const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+            ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+        const TYPE_LABELS = {
+            conferencia:'Conferencia', 'taller-simulacion':'Taller · Simulación',
+            'taller-habilidades':'Taller · Habilidades', 'taller-casos':'Taller · Disc. Casos',
+            'taller-enfermeria':'Taller · Enfermería', mesa:'Mesa Redonda', simposio:'Simposio',
+            ceremonia:'Ceremonia', break:'Coffee Break', almuerzo:'Almuerzo', poster:'Póster'
+        };
+        const typeLabel = t => TYPE_LABELS[t] || t || '—';
+
+        const EXPORT_GROUPS = [
+            {key:'conferencia', label:'Conferencias', match:t=>t==='conferencia'},
+            {key:'talleres', label:'Talleres', match:t=>String(t).startsWith('taller-')},
+            {key:'mesa', label:'Mesas redondas', match:t=>t==='mesa'},
+            {key:'simposio', label:'Simposios', match:t=>t==='simposio'},
+            {key:'ceremonia', label:'Ceremonias', match:t=>t==='ceremonia'},
+            {key:'pausas', label:'Pausas (café / almuerzo)', match:t=>t==='break'||t==='almuerzo'},
+            {key:'poster', label:'Pósters', match:t=>t==='poster'},
+        ];
+        EXPORT_GROUPS.push({key:'otros', label:'Otros', match:t=>!EXPORT_GROUPS.some(g=>g.key!=='otros'&&g.match(t))});
+
+        function toggleAllChecks(cls, val){
+            document.querySelectorAll('.'+cls).forEach(c => c.checked = val);
+        }
+        function expHora(e){
+            if (e.time) return e.time;
+            if (typeof e.startHour === 'number')
+                return formatTime(e.startHour) + (typeof e.endHour === 'number' ? '–'+formatTime(e.endHour) : '');
+            return '';
+        }
+        function expEquipoInstr(e){
+            let ins = [...(e.instructores||[]), ...(e.speakers||[]), ...(e.asistentes||[])]
+                .map(s => String(s).trim()).filter(Boolean).join(', ');
+            if (e.tecnicoSim) ins += (ins ? ' · ' : '') + 'Téc: ' + e.tecnicoSim;
+            return ins;
+        }
+
+        function openExportModal(){
+            // Días presentes
+            const present = new Set(events.map(e => dayOrder.includes(e.day) ? e.day : 'otros'));
+            const dayBoxes = dayOrder.filter(d => present.has(d)).map(d =>
+                `<label><input type="checkbox" class="exp-day" value="${d}" checked> ${esc(dayLabels[d])}</label>`);
+            if (present.has('otros'))
+                dayBoxes.push(`<label><input type="checkbox" class="exp-day" value="otros" checked> Otros / a confirmar</label>`);
+            document.getElementById('exportDays').innerHTML = dayBoxes.join('');
+            // Tipos presentes
+            const typeBoxes = EXPORT_GROUPS.filter(g => events.some(e => g.match(e.type))).map(g =>
+                `<label><input type="checkbox" class="exp-type" value="${g.key}" checked> ${esc(g.label)}</label>`);
+            document.getElementById('exportTypes').innerHTML = typeBoxes.join('');
+            document.getElementById('exportModal').classList.add('visible');
+        }
+        function closeExportModal(){ document.getElementById('exportModal').classList.remove('visible'); }
+
+        function buildExport(){
+            const days = [...document.querySelectorAll('.exp-day:checked')].map(c => c.value);
+            const typeKeys = [...document.querySelectorAll('.exp-type:checked')].map(c => c.value);
+            const includeTeam = document.getElementById('expTeam').checked;
+            const groupsSel = EXPORT_GROUPS.filter(g => typeKeys.includes(g.key));
+            const typeOk = t => groupsSel.some(g => g.match(t));
+
+            const headers = includeTeam
+                ? ['Hora','Actividad','Tipo','Lugar','Coordina','Instructores / Ponentes','Cupos','Notas']
+                : ['Hora','Actividad','Tipo','Lugar','Cupos','Notas'];
+
+            const order = [...dayOrder, 'otros'];
+            const groups = [];
+            order.forEach(day => {
+                const label = day === 'otros' ? 'Otros / a confirmar' : dayLabels[day];
+                const dayKey = e => dayOrder.includes(e.day) ? e.day : 'otros';
+                if (!days.includes(day)) return;
+                const rows = events
+                    .filter(e => dayKey(e) === day && typeOk(e.type))
+                    .sort((a,b) => (a.startHour||0) - (b.startHour||0));
+                if (!rows.length) return;
+                groups.push({ label, rows: rows.map(e => includeTeam
+                    ? [expHora(e), e.title||'', typeLabel(e.type), e.location||'', (e.coordinators||[]).join(', '), expEquipoInstr(e), e.cupos||'', e.notes||'']
+                    : [expHora(e), e.title||'', typeLabel(e.type), e.location||'', e.cupos||'', e.notes||'']) });
+            });
+            return { headers, groups, count: groups.reduce((n,g)=>n+g.rows.length,0) };
+        }
+
+        function downloadBlob(filename, blob){
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1500);
+        }
+
+        function exportExcel(){
+            const { headers, groups, count } = buildExport();
+            if (!count) { showToast('No hay actividades con esos filtros', 'warning'); return; }
+            const nc = headers.length;
+            let t = '<table border="1" style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11pt">';
+            t += `<tr><td colspan="${nc}" style="background:#1f3864;color:#fff;font-size:14pt;font-weight:bold;padding:8px">XXIV Congreso Uruguayo de Anestesiología · 12–16 Octubre 2026</td></tr>`;
+            t += '<tr>' + headers.map(h => `<th style="background:#2e5c8a;color:#fff;padding:6px;text-align:left">${esc(h)}</th>`).join('') + '</tr>';
+            groups.forEach(g => {
+                t += `<tr><td colspan="${nc}" style="background:#d9e2f3;color:#1f3864;font-weight:bold;padding:6px">${esc(g.label)}</td></tr>`;
+                g.rows.forEach(r => {
+                    t += '<tr>' + r.map((c,i) => `<td style="padding:5px;vertical-align:top${i===0?';white-space:nowrap':''}">${esc(c)}</td>`).join('') + '</tr>';
+                });
+            });
+            t += '</table>';
+            const html = '<html><head><meta charset="utf-8"></head><body>' + t + '</body></html>';
+            downloadBlob('cronograma-congreso-2026.xls',
+                new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel;charset=utf-8' }));
+            showToast('Excel descargado', 'success');
+        }
+
+        function exportPDF(){
+            const { headers, groups, count } = buildExport();
+            if (!count) { showToast('No hay actividades con esos filtros', 'warning'); return; }
+            const nc = headers.length;
+            const styleFor = i => i === 0 ? 'white-space:nowrap;font-weight:600' : '';
+            let body = '';
+            groups.forEach(g => {
+                body += `<h2>${esc(g.label)}</h2><table><thead><tr>`
+                     + headers.map(h => `<th>${esc(h)}</th>`).join('') + '</tr></thead><tbody>';
+                g.rows.forEach(r => {
+                    body += '<tr>' + r.map((c,i) => `<td style="${styleFor(i)}">${esc(c).replace(/\n/g,'<br>')}</td>`).join('') + '</tr>';
+                });
+                body += '</tbody></table>';
+            });
+            const doc = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>Cronograma · Congreso Anestesiología 2026</title>
+<style>
+  *{box-sizing:border-box}
+  body{font:12px/1.45 -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#22262b;margin:0;padding:24px}
+  .doc-head{border-bottom:3px solid #1f3864;padding-bottom:10px;margin-bottom:16px}
+  .doc-head h1{margin:0;color:#1f3864;font-size:20px}
+  .doc-head p{margin:4px 0 0;color:#6b7280;font-size:12px}
+  h2{color:#1f3864;font-size:14px;margin:18px 0 6px;padding:4px 0;border-bottom:1px solid #c9d3e8}
+  table{width:100%;border-collapse:collapse;margin-bottom:6px}
+  th,td{border:1px solid #d7dde6;padding:5px 7px;text-align:left;vertical-align:top}
+  th{background:#2e5c8a;color:#fff;font-size:11px}
+  tr:nth-child(even) td{background:#f4f7fb}
+  .no-print{margin-bottom:14px}
+  .no-print button{background:#2e5c8a;color:#fff;border:0;border-radius:8px;padding:10px 16px;font-size:14px;cursor:pointer}
+  @media print{ .no-print{display:none} body{padding:0} h2{page-break-after:avoid} tr{page-break-inside:avoid} @page{margin:14mm} }
+</style></head><body>
+  <div class="no-print"><button onclick="window.print()">🖨️ Imprimir / Guardar como PDF</button></div>
+  <div class="doc-head">
+    <h1>XXIV Congreso Uruguayo de Anestesiología</h1>
+    <p>12 – 16 de Octubre 2026 · Cronograma</p>
+  </div>
+  ${body}
+  <script>window.onload=function(){setTimeout(function(){window.print()},350)}<\/script>
+</body></html>`;
+            const w = window.open('', '_blank');
+            if (!w) { showToast('El navegador bloqueó la ventana. Permití pop-ups y reintentá.', 'warning'); return; }
+            w.document.write(doc); w.document.close();
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           FORMULARIOS — constructor genérico (definiciones + respuestas en KV)
+           ═══════════════════════════════════════════════════════════════ */
+        const KV_BASE = 'https://congresosau-api.contacto-f4a.workers.dev/kv/';
+        const FIELD_TYPES = {
+            text:'Texto corto', textarea:'Párrafo', email:'Email',
+            yesno:'Sí / No', select:'Selección única', multiselect:'Selección múltiple'
+        };
+        let formsCache = [];
+        let editingFields = [];
+        let currentRespForm = null, currentResponses = [];
+
+        async function kvGet(key){
+            const r = await fetch(KV_BASE + key + '?t=' + Date.now());
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return await r.json();
+        }
+        async function kvPut(key, val){
+            const r = await fetch(KV_BASE + key, {
+                method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(val) });
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return await r.json();
+        }
+        function formLink(id){
+            const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+            return base + 'formulario.html?f=' + id;
+        }
+        function uid(p){ return p + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+        async function openFormsManager(){
+            document.getElementById('formsModal').classList.add('visible');
+            document.getElementById('formsList').innerHTML = '<p style="opacity:.6">Cargando…</p>';
+            try {
+                formsCache = (await kvGet('forms')) || [];
+                if (!Array.isArray(formsCache)) formsCache = [];
+                renderFormsList();
+            } catch (e) {
+                document.getElementById('formsList').innerHTML =
+                    '<p style="color:#e94560">No se pudieron cargar los formularios. ¿El worker tiene el endpoint /kv? (' + esc(e.message) + ')</p>';
+            }
+        }
+        function closeFormsManager(){ document.getElementById('formsModal').classList.remove('visible'); }
+
+        function renderFormsList(){
+            const el = document.getElementById('formsList');
+            if (!formsCache.length) { el.innerHTML = '<p style="opacity:.6">Todavía no hay formularios. Creá el primero.</p>'; return; }
+            el.innerHTML = formsCache.map(f => `
+                <div class="form-item">
+                    <h4>${esc(f.title)} ${f.open ? '<span class="badge-open">Abierto</span>' : '<span class="badge-closed">Cerrado</span>'}</h4>
+                    <div class="form-meta">${(f.fields||[]).length} campo(s)${f.description ? ' · ' + esc(f.description.slice(0,60)) + (f.description.length>60?'…':'') : ''}</div>
+                    <div class="form-btns">
+                        <button onclick="copyFormLink('${f.id}')">🔗 Copiar link</button>
+                        <button onclick="openResponses('${f.id}')">📥 Ver respuestas</button>
+                        <button onclick="editForm('${f.id}')">✏️ Editar</button>
+                        <button onclick="deleteForm('${f.id}')">🗑️ Eliminar</button>
+                    </div>
+                </div>`).join('');
+        }
+
+        function copyFormLink(id){
+            const link = formLink(id);
+            if (navigator.clipboard) navigator.clipboard.writeText(link)
+                .then(() => showToast('Link copiado: ' + link, 'success'))
+                .catch(() => prompt('Copiá el link:', link));
+            else prompt('Copiá el link:', link);
+        }
+
+        function editForm(id){
+            const f = id ? formsCache.find(x => x.id === id) : null;
+            document.getElementById('formEditTitle').textContent = f ? 'Editar formulario' : 'Nuevo formulario';
+            document.getElementById('formId').value = f ? f.id : '';
+            document.getElementById('formTitle').value = f ? f.title : '';
+            document.getElementById('formDesc').value = f ? (f.description || '') : '';
+            document.getElementById('formOpen').checked = f ? !!f.open : true;
+            editingFields = f ? JSON.parse(JSON.stringify(f.fields || [])) : [];
+            if (!editingFields.length) addField(); else renderFields();
+            document.getElementById('formEditModal').classList.add('visible');
+        }
+        function closeFormEditor(){ document.getElementById('formEditModal').classList.remove('visible'); }
+
+        function addField(){
+            editingFields.push({ id: uid('q'), type:'text', label:'', hint:'', required:false, options:[] });
+            renderFields();
+        }
+        function renderFields(){
+            const el = document.getElementById('formFields');
+            el.innerHTML = editingFields.map((f, i) => {
+                const hasOpts = f.type === 'select' || f.type === 'multiselect';
+                return `
+                <div class="field-row">
+                    <div class="field-top">
+                        <input type="text" placeholder="Pregunta / etiqueta del campo" value="${esc(f.label)}"
+                            oninput="editingFields[${i}].label=this.value">
+                        <select onchange="editingFields[${i}].type=this.value;renderFields()">
+                            ${Object.entries(FIELD_TYPES).map(([v,l]) =>
+                                `<option value="${v}"${f.type===v?' selected':''}>${l}</option>`).join('')}
+                        </select>
+                        <button type="button" class="field-del" title="Eliminar campo"
+                            onclick="editingFields.splice(${i},1);renderFields()">🗑️</button>
+                    </div>
+                    <div style="margin-top:8px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+                        <input type="text" placeholder="Ayuda / aclaración (opcional)" value="${esc(f.hint||'')}"
+                            oninput="editingFields[${i}].hint=this.value" style="flex:1;min-width:160px">
+                        <label class="inline"><input type="checkbox" ${f.required?'checked':''}
+                            onchange="editingFields[${i}].required=this.checked"> Obligatorio</label>
+                        <span style="opacity:.6;font-size:.78rem">${i>0?`<a href="#" onclick="moveField(${i},-1);return false" style="color:#4facfe">↑</a>`:''} ${i<editingFields.length-1?`<a href="#" onclick="moveField(${i},1);return false" style="color:#4facfe">↓</a>`:''}</span>
+                    </div>
+                    ${hasOpts ? `<div class="field-opts">Opciones (una por línea):
+                        <textarea rows="3" style="width:100%;margin-top:4px" placeholder="Opción A&#10;Opción B"
+                            oninput="editingFields[${i}].options=this.value.split('\\n').map(s=>s.trim()).filter(Boolean)">${esc((f.options||[]).join('\n'))}</textarea></div>` : ''}
+                </div>`;
+            }).join('');
+        }
+        function moveField(i, dir){
+            const j = i + dir;
+            if (j < 0 || j >= editingFields.length) return;
+            [editingFields[i], editingFields[j]] = [editingFields[j], editingFields[i]];
+            renderFields();
+        }
+
+        async function saveForm(){
+            const title = document.getElementById('formTitle').value.trim();
+            if (!title) { showToast('Poné un título al formulario', 'warning'); return; }
+            const fields = editingFields.filter(f => f.label.trim());
+            if (!fields.length) { showToast('Agregá al menos un campo con etiqueta', 'warning'); return; }
+            const badOpts = fields.find(f => (f.type==='select'||f.type==='multiselect') && !(f.options||[]).length);
+            if (badOpts) { showToast('El campo "' + badOpts.label + '" necesita opciones', 'warning'); return; }
+
+            const existingId = document.getElementById('formId').value;
+            const now = new Date().toISOString();
+            let form;
+            if (existingId) {
+                form = formsCache.find(x => x.id === existingId);
+                Object.assign(form, { title, description: document.getElementById('formDesc').value.trim(),
+                    open: document.getElementById('formOpen').checked, fields, updatedAt: now });
+            } else {
+                form = { id: uid('f'), title, description: document.getElementById('formDesc').value.trim(),
+                    open: document.getElementById('formOpen').checked, fields, createdAt: now, updatedAt: now };
+                formsCache.push(form);
+            }
+            try {
+                await kvPut('forms', formsCache);
+                showToast('Formulario guardado', 'success');
+                closeFormEditor();
+                renderFormsList();
+            } catch (e) {
+                showToast('No se pudo guardar: ' + e.message, 'warning');
+                if (!existingId) formsCache.pop();
+            }
+        }
+
+        async function deleteForm(id){
+            const f = formsCache.find(x => x.id === id);
+            if (!f) return;
+            if (!confirm('¿Eliminar el formulario "' + f.title + '"? Las respuestas guardadas quedan huérfanas pero no se borran.')) return;
+            const backup = formsCache.slice();
+            formsCache = formsCache.filter(x => x.id !== id);
+            try {
+                await kvPut('forms', formsCache);
+                showToast('Formulario eliminado', 'info');
+                renderFormsList();
+            } catch (e) {
+                formsCache = backup;
+                showToast('No se pudo eliminar: ' + e.message, 'warning');
+            }
+        }
+
+        async function openResponses(id){
+            currentRespForm = formsCache.find(x => x.id === id);
+            if (!currentRespForm) return;
+            document.getElementById('formRespTitle').textContent = 'Respuestas · ' + currentRespForm.title;
+            document.getElementById('formRespModal').classList.add('visible');
+            await refreshResponses();
+        }
+        function closeFormResp(){ document.getElementById('formRespModal').classList.remove('visible'); }
+
+        async function refreshResponses(){
+            const body = document.getElementById('formRespBody');
+            body.innerHTML = '<p style="opacity:.6">Cargando…</p>';
+            try {
+                currentResponses = (await kvGet('resp_' + currentRespForm.id)) || [];
+                if (!Array.isArray(currentResponses)) currentResponses = [];
+                renderResponses();
+            } catch (e) {
+                body.innerHTML = '<p style="color:#e94560">No se pudieron cargar las respuestas (' + esc(e.message) + ')</p>';
+            }
+        }
+        function respCell(v){ return Array.isArray(v) ? v.join(', ') : (v == null ? '' : String(v)); }
+        function renderResponses(){
+            const body = document.getElementById('formRespBody');
+            if (!currentResponses.length) { body.innerHTML = '<p style="opacity:.6">Todavía no hay respuestas.</p>'; return; }
+            const fields = currentRespForm.fields || [];
+            let t = `<p style="opacity:.7;font-size:.85rem">${currentResponses.length} respuesta(s)</p>`;
+            t += '<table class="resp-table"><thead><tr><th>Fecha</th>'
+               + fields.map(f => `<th>${esc(f.label)}</th>`).join('') + '</tr></thead><tbody>';
+            currentResponses.slice().reverse().forEach(r => {
+                const fecha = r.at ? new Date(r.at).toLocaleString('es-UY', {dateStyle:'short', timeStyle:'short'}) : '';
+                t += '<tr><td style="white-space:nowrap">' + esc(fecha) + '</td>'
+                   + fields.map(f => `<td>${esc(respCell((r.answers||{})[f.id]))}</td>`).join('') + '</tr>';
+            });
+            t += '</tbody></table>';
+            body.innerHTML = t;
+        }
+        function exportResponsesExcel(){
+            if (!currentResponses.length) { showToast('No hay respuestas para exportar', 'warning'); return; }
+            const fields = currentRespForm.fields || [];
+            let t = '<table border="1" style="border-collapse:collapse;font-family:Calibri,Arial;font-size:11pt"><tr>'
+                  + '<th style="background:#2e5c8a;color:#fff;padding:6px">Fecha</th>'
+                  + fields.map(f => `<th style="background:#2e5c8a;color:#fff;padding:6px">${esc(f.label)}</th>`).join('') + '</tr>';
+            currentResponses.slice().reverse().forEach(r => {
+                const fecha = r.at ? new Date(r.at).toLocaleString('es-UY') : '';
+                t += '<tr><td style="padding:5px">' + esc(fecha) + '</td>'
+                   + fields.map(f => `<td style="padding:5px">${esc(respCell((r.answers||{})[f.id]))}</td>`).join('') + '</tr>';
+            });
+            t += '</table>';
+            const html = '<html><head><meta charset="utf-8"></head><body>' + t + '</body></html>';
+            const slug = currentRespForm.title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+            downloadBlob('respuestas-' + (slug||'formulario') + '.xls',
+                new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel;charset=utf-8' }));
+            showToast('Excel descargado', 'success');
+        }
+
+        // Cerrar modales nuevos al clickear afuera
+        ['exportModal','formsModal','formEditModal','formRespModal'].forEach(id => {
+            const m = document.getElementById(id);
+            if (m) m.addEventListener('click', e => { if (e.target.id === id) m.classList.remove('visible'); });
         });
 
         // Initial render
