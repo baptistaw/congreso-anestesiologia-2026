@@ -295,16 +295,21 @@
 
         .hour-line {
             position: absolute;
-            left: 42px;
+            left: 0;
             right: 0;
             height: 0;
             border-top: 1px dashed rgba(255,255,255,0.07);
         }
 
-        .events-area {
+        /* Wrapper scrollable en horizontal; el gutter de horas queda fijo afuera */
+        .day-scroll {
             position: relative;
             margin-left: 45px;
             margin-right: 5px;
+        }
+
+        .events-area {
+            position: relative;
         }
 
         .event {
@@ -681,11 +686,21 @@
             }
 
             .hour-line {
-                left: 32px;
+                left: 0;
             }
 
-            .events-area {
+            .day-scroll {
                 margin-left: 35px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+            }
+
+            /* Cada track ocupa al menos 158px legibles; si no entran, el día
+               scrollea en horizontal en vez de aplastar las tarjetas. */
+            .events-area {
+                margin-left: 0;
+                min-width: calc(var(--tracks, 1) * 158px);
             }
 
             .edit-mode .mobile-actions {
@@ -2353,7 +2368,7 @@
                     content.addEventListener('dragleave', handleDragLeave);
                 }
 
-                // Time gutter and hour lines
+                // Time gutter (queda fijo, fuera del scroll horizontal)
                 const gutter = document.createElement('div');
                 gutter.className = 'time-gutter';
                 for (let h = minHour; h <= maxHour; h++) {
@@ -2362,20 +2377,29 @@
                     marker.style.top = ((h - minHour) * PIXELS_PER_HOUR) + 'px';
                     marker.textContent = h.toString().padStart(2, '0') + ':00';
                     gutter.appendChild(marker);
-
-                    if (h < maxHour) {
-                        const line = document.createElement('div');
-                        line.className = 'hour-line';
-                        line.style.top = ((h - minHour) * PIXELS_PER_HOUR) + 'px';
-                        content.appendChild(line);
-                    }
                 }
                 content.appendChild(gutter);
 
-                // Events area
+                // Wrapper scrollable en horizontal + área de eventos
+                const dayScroll = document.createElement('div');
+                dayScroll.className = 'day-scroll';
+
                 const eventsArea = document.createElement('div');
                 eventsArea.className = 'events-area';
                 eventsArea.style.height = totalHeight + 'px';
+                // Máximo de tracks simultáneos del día: define el ancho mínimo
+                // para que en mobile las tarjetas no se aplasten.
+                const dayMaxTracks = visibleEvents.reduce((m, ev) => Math.max(m, ev._totalTracks || 1), 1);
+                eventsArea.style.setProperty('--tracks', dayMaxTracks);
+
+                // Líneas de hora: dentro del área de eventos para que abarquen
+                // todo el ancho scrolleable y sigan alineadas con el gutter.
+                for (let h = minHour; h < maxHour; h++) {
+                    const line = document.createElement('div');
+                    line.className = 'hour-line';
+                    line.style.top = ((h - minHour) * PIXELS_PER_HOUR) + 'px';
+                    eventsArea.appendChild(line);
+                }
 
                 visibleEvents.forEach(event => {
                     const div = document.createElement('div');
@@ -2455,7 +2479,8 @@
                     eventsArea.appendChild(div);
                 });
 
-                content.appendChild(eventsArea);
+                dayScroll.appendChild(eventsArea);
+                content.appendChild(dayScroll);
                 column.appendChild(content);
 
                 if (preCongressDays.includes(day)) {
