@@ -1343,26 +1343,10 @@
 
                 <div id="tallerFieldsContainer" style="display:none; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 15px; margin: 10px 0; background: rgba(255,255,255,0.05);">
                     <h4 style="margin: 0 0 12px 0; color: #38ef7d; font-size: 0.95rem;">Equipo del Taller</h4>
-                    <div class="form-row">
-                        <div class="form-group"><label>Instructor 1</label><input type="text" id="eventInstructor1" placeholder="Nombre"></div>
-                        <div class="form-group"><label>Instructor 2</label><input type="text" id="eventInstructor2" placeholder="Nombre"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Instructor 3</label><input type="text" id="eventInstructor3" placeholder="Nombre"></div>
-                        <div class="form-group"><label>Instructor 4</label><input type="text" id="eventInstructor4" placeholder="Nombre"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Instructor 5</label><input type="text" id="eventInstructor5" placeholder="Nombre"></div>
-                        <div class="form-group"><label>Instructor 6</label><input type="text" id="eventInstructor6" placeholder="Nombre"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Instructor Asistente 1</label><input type="text" id="eventAsistente1" placeholder="Nombre"></div>
-                        <div class="form-group"><label>Instructor Asistente 2</label><input type="text" id="eventAsistente2" placeholder="Nombre"></div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Instructor Asistente 3</label><input type="text" id="eventAsistente3" placeholder="Nombre"></div>
-                        <div class="form-group"><label>Instructor Asistente 4</label><input type="text" id="eventAsistente4" placeholder="Nombre"></div>
-                    </div>
+                    <div id="insWrap"></div>
+                    <button type="button" class="toolbar-btn btn-secondary" style="margin:4px 0 14px" onclick="addSlot('ins')">+ Agregar instructor</button>
+                    <div id="asiWrap"></div>
+                    <button type="button" class="toolbar-btn btn-secondary" style="margin:4px 0 14px" onclick="addSlot('asi')">+ Agregar instructor asistente</button>
                     <div class="form-group" id="tecnicoSimGroup" style="display:none;">
                         <label>Técnico en Simulación</label>
                         <input type="text" id="eventTecnicoSim" placeholder="Nombre" value="Lic. Mauricio Castro">
@@ -3032,6 +3016,34 @@
             modal.classList.add('visible');
         }
 
+        /* Slots de equipo dinamicos. Antes eran 6 inputs fijos de instructor y 4
+           de asistente, y el guardado leia [1..6]/[1..4]: abrir y guardar un
+           taller con mas gente que eso le borraba el resto en silencio. */
+        const SLOT_CFG = { ins: { campo: 'eventInstructor', label: 'Instructor', min: 6 },
+                           asi: { campo: 'eventAsistente',  label: 'Instructor Asistente', min: 4 } };
+        function pintarSlots(tipo, valores) {
+            const cfg = SLOT_CFG[tipo];
+            const n = Math.max(cfg.min, valores.length + 1);
+            let html = '';
+            for (let i = 0; i < n; i += 2) {
+                html += '<div class="form-row">';
+                for (let j = i; j < Math.min(i + 2, n); j++) {
+                    html += `<div class="form-group"><label>${cfg.label} ${j+1}</label>` +
+                            `<input type="text" id="${cfg.campo}${j+1}" data-slot="${tipo}" placeholder="Nombre" ` +
+                            `value="${esc(valores[j] || '')}"></div>`;
+                }
+                html += '</div>';
+            }
+            document.getElementById(tipo === 'ins' ? 'insWrap' : 'asiWrap').innerHTML = html;
+        }
+        function leerSlots(tipo) {
+            return [...document.querySelectorAll(`[data-slot="${tipo}"]`)]
+                .map(i => i.value.trim()).filter(Boolean);
+        }
+        function addSlot(tipo) {
+            pintarSlots(tipo, leerSlots(tipo).concat(''));
+        }
+
         // Edit event
         function editEvent(id) {
             const event = events.find(e => e.id == id);
@@ -3058,15 +3070,9 @@
             document.getElementById('eventCupos').value = event.cupos || '';
             document.getElementById('eventNotes').value = event.notes || '';
 
-            // Populate taller fields
-            const instructores = event.instructores || [];
-            for (let i = 1; i <= 6; i++) {
-                document.getElementById('eventInstructor' + i).value = instructores[i - 1] || '';
-            }
-            const asistentes = event.asistentes || [];
-            for (let i = 1; i <= 4; i++) {
-                document.getElementById('eventAsistente' + i).value = asistentes[i - 1] || '';
-            }
+            // Populate taller fields: slots dinamicos, nunca truncan la lista
+            pintarSlots('ins', event.instructores || []);
+            pintarSlots('asi', event.asistentes || []);
             document.getElementById('eventTecnicoSim').value = event.tecnicoSim || 'Lic. Mauricio Castro';
             toggleTallerFields();
 
@@ -3125,8 +3131,8 @@
                 speakers: document.getElementById('eventSpeakers').value.split(',').map(s => s.trim()).filter(s => s),
                 cupos: document.getElementById('eventCupos').value,
                 notes: document.getElementById('eventNotes').value,
-                instructores: [1,2,3,4,5,6].map(i => document.getElementById('eventInstructor' + i).value.trim()).filter(s => s),
-                asistentes: [1,2,3,4].map(i => document.getElementById('eventAsistente' + i).value.trim()).filter(s => s),
+                instructores: leerSlots('ins'),
+                asistentes: leerSlots('asi'),
                 tecnicoSim: document.getElementById('eventType').value === 'taller-simulacion' ? document.getElementById('eventTecnicoSim').value.trim() : ''
             };
 
