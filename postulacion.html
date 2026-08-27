@@ -423,8 +423,8 @@ function pintarTalleres() {
             <input type="radio" name="rol${t.id}" value="instructor">Como instructor (${c.libIns} libre${c.libIns === 1 ? '' : 's'})</label>` : ''}
           ${c.libFor ? `<label onclick="rol(${t.id},'formacion')">
             <input type="radio" name="rol${t.id}" value="formacion">En formación · observador (${c.libFor} libre${c.libFor === 1 ? '' : 's'})</label>` : ''}
-          ${!falta && !c.libFor ? `<label onclick="rol(${t.id},'formacion')">
-            <input type="radio" name="rol${t.id}" value="formacion">Sin lugares libres · anotarme en lista de espera</label>` : ''}
+          ${!falta && !c.libFor ? `<label onclick="rol(${t.id},'${c.totFor ? 'formacion' : 'instructor'}')">
+            <input type="radio" name="rol${t.id}" value="${c.totFor ? 'formacion' : 'instructor'}">Sin lugares libres · anotarme en lista de espera</label>` : ''}
         </div>
         <label>¿Tenés experiencia previa en este taller o en el tema?</label>
         <textarea oninput="post[${t.id}].experiencia=this.value"
@@ -438,7 +438,10 @@ function toggle(id, on) {
   $('x' + id).classList.toggle('oculto', !on);
   if (on) {
     const t = talleres.find(e => e.id === id);
-    post[id] = { rol: cupos(t).libIns > 0 ? 'instructor' : 'formacion', experiencia: '' };
+    const cu = cupos(t);
+    // Un taller sin cupos de formacion (ej. enfermeria: son estaciones de
+    // habilidades, no hay observadores) nunca debe generar rol 'formacion'.
+    post[id] = { rol: (cu.libIns > 0 || !cu.totFor) ? 'instructor' : 'formacion', experiencia: '' };
     const r = $('r' + id).querySelector('input');
     if (r) { r.checked = true; r.closest('label').classList.add('on'); }
   } else delete post[id];
