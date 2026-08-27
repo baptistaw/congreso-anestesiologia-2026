@@ -49,9 +49,23 @@
   .t-ok{background:var(--okbg);color:var(--ok)}
   .t-form{background:var(--formbg);color:var(--form)}
   .desc{font-size:13.5px;color:#3f4650;margin-top:9px;padding-top:9px;border-top:1px solid var(--linea)}
-  .equipo{font-size:12.5px;color:var(--gris);margin-top:8px}
-  .equipo b{color:var(--azul2);font-weight:700}
-  .equipo span{display:block;margin-top:2px}
+  .cupos{margin-top:10px;padding-top:10px;border-top:1px solid var(--linea)}
+  .cupos .lin{font-size:12.5px;color:var(--gris);margin-bottom:9px}
+  .cupos .lin b{color:var(--azul2)}
+  .grupo{margin-top:9px}
+  .cab{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .cab b{font-size:13px;color:var(--azul)}
+  .cnt{font-size:12px;font-weight:700}
+  .cnt.falta{color:var(--alerta)}
+  .cnt.lleno{color:var(--ok)}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  .p{font-size:12.5px;padding:4px 9px;border-radius:999px;background:#eef1f5;color:#3f4650;
+    border:1px solid transparent;max-width:100%;overflow-wrap:anywhere}
+  .p.ok{background:var(--okbg);color:var(--ok)}
+  .p.pend{background:var(--formbg);color:var(--form)}
+  .p.libre{background:transparent;border:1px dashed #c3cad3;color:var(--gris);font-style:italic}
+  .p.yo{outline:2px solid var(--acento);outline-offset:1px;font-weight:800;
+    background:#e3f0fd;color:var(--azul)}
   .perfil{font-size:12.5px;color:var(--gris);margin-top:8px;padding-top:8px;border-top:1px dashed var(--linea)}
   .perfil b{color:var(--azul2)}
   .vermas{display:inline-block;margin-top:7px;font-size:13px;font-weight:700;
@@ -66,6 +80,10 @@
   .conf{border:1.5px solid var(--linea);border-radius:12px;padding:13px;margin-bottom:10px;background:#fff}
   .conf.si{border-color:var(--ok);background:var(--okbg)}
   .conf.no{border-color:var(--alerta);background:var(--alertabg)}
+  .conf.pend{border-color:#e0ab3a;background:var(--formbg)}
+  .conf .estado{font-size:13.5px;font-weight:700;color:var(--azul);margin-top:9px;
+    padding-top:9px;border-top:1px solid rgba(0,0,0,.07)}
+  .conf .estado .sub{display:block;font-weight:400;color:var(--gris);margin-top:2px}
   .conf .bts{display:flex;gap:8px;margin-top:10px}
   .conf .bts button{flex:1;padding:11px;font-size:14px;font-weight:700;font-family:inherit;
     border:1.5px solid var(--linea);background:#fff;border-radius:9px;cursor:pointer;color:var(--txt)}
@@ -93,7 +111,7 @@
 
 <header><div class="in">
   <h1>Talleres de Simulación · Congreso 2026</h1>
-  <p>Confirmá los talleres que ya tenés asignados y postulate a los que quieras sumarte.</p>
+  <p>Confirmá los talleres que ya tenés asignados, revisá tus postulaciones y sumate a otros.</p>
 </div></header>
 
 <div class="wrap">
@@ -118,7 +136,7 @@
 
   <!-- PASO 2 -->
   <section id="p2" class="oculto">
-    <div class="paso">Paso 2 de 3 · Lo que ya tenés asignado</div>
+    <div class="paso">Paso 2 de 3 · Tus talleres</div>
     <div id="asignados"></div>
   </section>
 
@@ -150,15 +168,32 @@
 <script>
 const API = 'https://congresosau-api.baptistaw.workers.dev/events';
 let talleres = [], paso = 1, yo = '', contacto = '';
-const conf = {};   // idEvento -> {estado, motivo}
+const conf = {};   // idEvento -> {estado, motivo, previo?}  previo = ya estaba guardado
 const post = {};   // idEvento -> {rol, experiencia}
+const bajas = {};  // idEvento -> true  (se baja de una postulacion pendiente)
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm = s => String(s || '').toLowerCase()
   .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  .replace(/\b(dr|dra|lic|prof)\.?\s*/g, '').replace(/\s+/g, ' ').trim();
+  .replace(/\s*\(.*?\)\s*/g, ' ')
+  .replace(/\b(dr|dra|lic|prof)\.?\s*/g, '')
+  .replace(/[^a-z0-9 ]/g, ' ')
+  .replace(/\s+/g, ' ').trim();
+/* Misma persona: normalizan igual, o todas las palabras del nombre mas corto
+   estan en el mas largo (minimo 2 palabras, para que un apellido suelto no
+   matchee de mas y le muestre a alguien el estado de un homonimo). */
+const mismaPersona = (a, b) => {
+  const x = norm(a), y = norm(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const wx = x.split(' '), wy = y.split(' ');
+  const [c, l] = wx.length <= wy.length ? [wx, wy] : [wy, wx];
+  return c.length >= 2 && c.every(w => l.includes(w));
+};
+const esMio = n => mismaPersona(n, yo);
+const dm = f => f ? f.slice(8, 10) + '/' + f.slice(5, 7) : '';
 
 /* ── carga ───────────────────────────────────────────── */
 async function cargar() {
@@ -169,9 +204,13 @@ async function cargar() {
     talleres = ev.filter(e => e.abiertoPostulacion);
     if (!talleres.length) throw new Error('No hay talleres abiertos por ahora.');
 
+    // Incluye tambien a quien ya confirmo o se postulo, para que al volver
+    // pueda autocompletar su nombre EXACTAMENTE como quedo guardado.
     const nombres = new Set();
-    ev.forEach(e => [...(e.coordinators||[]), ...(e.instructores||[]), ...(e.asistentes||[])]
-      .forEach(n => n && nombres.add(n.replace(/\s*\(.*?\)\s*/g, '').trim())));
+    ev.forEach(e => [...(e.coordinators||[]), ...(e.instructores||[]), ...(e.asistentes||[]),
+                     ...(e.confirmaciones||[]).map(c => c.nombre),
+                     ...(e.postulaciones||[]).map(x => x.nombre)]
+      .forEach(n => n && nombres.add(String(n).replace(/\s*\(.*?\)\s*/g, '').trim())));
     $('conocidos').innerHTML = [...nombres].sort()
       .map(n => `<option value="${esc(n)}">`).join('');
 
@@ -186,44 +225,103 @@ async function cargar() {
 function mostrarError(m) { $('err').textContent = m; $('err').classList.remove('oculto'); }
 function limpiarError() { $('err').classList.add('oculto'); }
 
-/* ── paso 2: lo asignado ─────────────────────────────── */
-function mios() {
-  const n = norm(yo);
-  if (!n) return [];
-  return talleres.filter(t => [...(t.instructores||[]), ...(t.coordinators||[])]
-    .some(p => { const q = norm(p); return q === n || q.includes(n) || n.includes(q); }));
+/* ── paso 2: tus talleres (asignados + postulaciones vivas) ──────────
+   Antes esto solo miraba instructores/coordinators y NUNCA leia lo que la
+   persona ya habia guardado: por eso una postulacion quedaba invisible y los
+   talleres pedian confirmacion de nuevo en cada visita. Ahora se lee. */
+function enEquipo(t) {
+  return [...(t.instructores||[]), ...(t.coordinators||[]), ...(t.asistentes||[])].some(esMio);
 }
-function pintarAsignados() {
-  const lista = mios();
-  if (!lista.length) {
-    $('asignados').innerHTML = `<div class="card">No figurás en ningún taller todavía.
-      Pasá al siguiente paso y postulate a los que te interesen.</div>`;
-    return;
-  }
-  $('asignados').innerHTML = lista.map(t => `
-    <div class="conf" id="c${t.id}">
+function miConfirmacion(t) {
+  return (t.confirmaciones||[]).filter(c => esMio(c.nombre)).slice(-1)[0] || null;
+}
+function miPostulacion(t) {
+  return (t.postulaciones||[]).filter(x => esMio(x.nombre)
+    && x.estado !== 'baja' && x.estado !== 'rechazada').slice(-1)[0] || null;
+}
+function mios()        { return talleres.filter(enEquipo); }
+function misTalleres() { return talleres.filter(t => enEquipo(t) || miPostulacion(t)); }
+
+/* Precarga en `conf` lo ya guardado, marcado como previo: asi el paso 2 sale
+   pintado, no vuelve a exigir confirmacion, y no se reescribe si no lo tocan. */
+function sembrarPrevios() {
+  mios().forEach(t => {
+    const c = miConfirmacion(t);
+    if (c && !conf[t.id]) conf[t.id] = { estado: c.estado, motivo: c.motivo || '', previo: true, fecha: c.fecha };
+  });
+}
+const hayCambios = () => Object.values(conf).some(c => !c.previo)
+  || Object.keys(post).length > 0 || Object.keys(bajas).length > 0;
+
+function cardAsignado(t) {
+  const c = conf[t.id] || null;
+  const est = c ? c.estado : null;
+  const cls = est === 'confirmado' ? ' si' : est === 'no_puede' ? ' no' : '';
+  const yaEra = c && c.previo;
+  return `
+    <div class="conf${cls}" id="c${t.id}">
       <div class="tit">${esc(t.title)}</div>
       <div class="meta">${esc(t.dayLabel)} · ${esc(t.time || 'horario a confirmar')} · ${esc(t.location)}</div>
+      ${yaEra ? `<div class="estado">${est === 'confirmado'
+          ? '✅ Ya confirmaste' : '❌ Ya avisaste que no podés'}${c.fecha ? ' el ' + dm(c.fecha) : ''}
+          <span class="sub">Si no cambió nada, seguí de largo.</span></div>` : ''}
       ${t.descripcion ? `<div class="desc">${esc(recortar(t.descripcion))}</div>` : ''}
       ${equipoHTML(t)}
       <div class="bts">
-        <button type="button" onclick="marcar(${t.id},'confirmado')">Confirmo</button>
-        <button type="button" onclick="marcar(${t.id},'no_puede')">No puedo</button>
+        <button type="button" class="${est === 'confirmado' ? 'on-si' : ''}"
+          onclick="marcar(${t.id},'confirmado')">Confirmo</button>
+        <button type="button" class="${est === 'no_puede' ? 'on-no' : ''}"
+          onclick="marcar(${t.id},'no_puede')">No puedo</button>
       </div>
-      <div id="m${t.id}" class="extra oculto">
+      <div id="m${t.id}" class="extra${est === 'no_puede' ? '' : ' oculto'}">
         <label>¿Por qué no podés? (opcional)</label>
-        <input type="text" oninput="conf[${t.id}].motivo=this.value" placeholder="Ej: estoy de guardia">
+        <input type="text" value="${esc(c ? c.motivo : '')}"
+          oninput="motivo(${t.id},this.value)" placeholder="Ej: estoy de guardia">
       </div>
-    </div>`).join('');
+    </div>`;
+}
+function cardPostulado(t) {
+  const p = miPostulacion(t), fuera = !!bajas[t.id];
+  return `
+    <div class="conf${fuera ? ' no' : ' pend'}" id="c${t.id}">
+      <div class="tit">${esc(t.title)}</div>
+      <div class="meta">${esc(t.dayLabel)} · ${esc(t.time || 'horario a confirmar')} · ${esc(t.location)}</div>
+      <div class="estado">${fuera
+        ? '❌ Te vas a bajar de este taller<span class="sub">Se aplica al enviar.</span>'
+        : `⏳ Ya te postulaste${p.fecha ? ' el ' + dm(p.fecha) : ''} · ${p.rol === 'formacion' ? 'en formación' : 'como instructor'}
+           <span class="sub">Pendiente de que el comité lo confirme. No hace falta postularse de nuevo.</span>`}</div>
+      ${t.descripcion ? `<div class="desc">${esc(recortar(t.descripcion))}</div>` : ''}
+      ${equipoHTML(t)}
+      <div class="bts">
+        <button type="button" class="${fuera ? '' : 'on-si'}" onclick="baja(${t.id},false)">Sigo anotada/o</button>
+        <button type="button" class="${fuera ? 'on-no' : ''}" onclick="baja(${t.id},true)">Bajarme</button>
+      </div>
+    </div>`;
+}
+function pintarAsignados() {
+  sembrarPrevios();
+  const lista = misTalleres();
+  if (!lista.length) {
+    $('asignados').innerHTML = `<div class="card">Todavía no estás en ningún taller
+      ni tenés postulaciones pendientes. Pasá al siguiente paso y postulate a los que te interesen.</div>`;
+    return;
+  }
+  $('asignados').innerHTML = lista.map(t => enEquipo(t) ? cardAsignado(t) : cardPostulado(t)).join('');
 }
 function marcar(id, estado) {
-  conf[id] = { estado, motivo: (conf[id] || {}).motivo || '' };
+  conf[id] = { estado, motivo: (conf[id] || {}).motivo || '' };  // sin `previo`: es un cambio
   const c = $('c' + id);
   c.className = 'conf ' + (estado === 'confirmado' ? 'si' : 'no');
   const b = c.querySelectorAll('.bts button');
   b[0].className = estado === 'confirmado' ? 'on-si' : '';
   b[1].className = estado === 'no_puede' ? 'on-no' : '';
   $('m' + id).classList.toggle('oculto', estado !== 'no_puede');
+}
+function motivo(id, v) { if (conf[id]) { conf[id].motivo = v; delete conf[id].previo; } }
+function baja(id, off) {
+  if (off) bajas[id] = true; else delete bajas[id];
+  const t = talleres.find(e => e.id === id);
+  $('c' + id).outerHTML = cardPostulado(t);
 }
 
 /* ── descripción y equipo ────────────────────────────── */
@@ -236,29 +334,71 @@ function verMas(id) {
   d.dataset.abierto = abierto ? '0' : '1';
   v.textContent = abierto ? 'Ver más' : 'Ver menos';
 }
+/* -- cupos: quien ocupa cada lugar y cuantos quedan ------------------
+   El postulante tiene que ver el taller completo antes de anotarse:
+   ocupados con nombre, pendientes, y lugares libres, separando instructor
+   de instructor en formacion. Su propio nombre va destacado. */
+const limpiar = a => (a || []).map(x => String(x).replace(/\s*\(invitado\)\s*/i, '').trim()).filter(Boolean);
+function cupos(t) {
+  const ins = limpiar(t.instructores), asi = limpiar(t.asistentes), co = limpiar(t.coordinators);
+  const enEq = n => [...ins, ...asi, ...co].some(x => mismaPersona(x, n));
+  const pend = (t.postulaciones || [])
+    .filter(p => p.estado !== 'baja' && p.estado !== 'rechazada' && !enEq(p.nombre));
+  const totIns = typeof t.requeridos === 'number' ? t.requeridos : ins.length;
+  const totFor = typeof t.cuposFormacion === 'number' ? t.cuposFormacion : 0;
+  /* OJO: una entrada de instructores[] puede empaquetar varias personas
+     ("Vía Aérea: Dra. López · Dra. Carreño"), asi que instructores.length NO
+     es la cantidad de cupos ocupados. `faltan` lo cura el comite y es el dato
+     bueno: se usa ese, y los ocupados se derivan de el. */
+  const libIns = typeof t.faltan === 'number' ? Math.max(0, t.faltan)
+                                              : Math.max(0, totIns - ins.length);
+  return {
+    co, ins, asi, inv: limpiar(t.speakers),
+    pIns: pend.filter(p => p.rol !== 'formacion'),
+    pFor: pend.filter(p => p.rol === 'formacion'),
+    totIns, totFor, libIns,
+    ocupIns: Math.max(ins.length, totIns - libIns),
+    ocupFor: asi.length,
+    libFor: Math.max(0, totFor - asi.length)
+  };
+}
+const chip = (n, cls) => `<span class="p ${cls}${esMio(n) ? ' yo' : ''}">${esc(n)}${esMio(n) ? ' · vos' : ''}</span>`;
+function grupoHTML(titulo, ocup, pend, libres, total, nOcup) {
+  if (!total && !ocup.length && !pend.length) return '';
+  return `<div class="grupo">
+    <div class="cab"><b>${titulo}</b>
+      <span class="cnt ${libres ? 'falta' : 'lleno'}">${nOcup}/${total} ocupado${nOcup === 1 ? '' : 's'} &middot;
+        ${libres ? libres + ' lugar' + (libres === 1 ? '' : 'es') + ' sin cubrir' : 'completo'}</span></div>
+    <div class="chips">
+      ${ocup.map(n => chip(n, 'ok')).join('')}
+      ${pend.map(p => `<span class="p pend${esMio(p.nombre) ? ' yo' : ''}">&#9203; ${esc(p.nombre)}${esMio(p.nombre) ? ' · vos' : ''} · pendiente</span>`).join('')}
+      ${Array.from({ length: libres }, () => `<span class="p libre">lugar libre</span>`).join('')}
+    </div>
+  </div>`;
+}
 function equipoHTML(t) {
-  const lim = a => (a || []).map(x => String(x).replace(/\s*\(invitado\)\s*/i, '').trim()).filter(Boolean);
-  const co = lim(t.coordinators), ins = lim(t.instructores), inv = lim(t.speakers);
-  if (!co.length && !ins.length && !inv.length && !t.tecnicoSim) return '';
-  return `<div class="equipo">
-    ${co.length ? `<span><b>Coordina:</b> ${esc(co.join(' · '))}</span>` : ''}
-    ${inv.length ? `<span><b>Invitado:</b> ${esc(inv.join(' · '))}</span>` : ''}
-    ${ins.length ? `<span><b>Ya están:</b> ${esc(ins.join(' · '))}</span>`
-                 : `<span><b>Instructores:</b> todavía nadie asignado</span>`}
-    ${t.tecnicoSim ? `<span><b>Técnico:</b> ${esc(t.tecnicoSim)}</span>` : ''}
+  const c = cupos(t);
+  return `<div class="cupos">
+    ${c.co.length || c.inv.length || t.tecnicoSim ? `<div class="lin">
+      ${c.co.length ? `<b>Coordina:</b> ${esc(c.co.join(' · '))}` : ''}
+      ${c.inv.length ? `${c.co.length ? ' · ' : ''}<b>Invitado:</b> ${esc(c.inv.join(' · '))}` : ''}
+      ${t.tecnicoSim ? `${c.co.length || c.inv.length ? ' · ' : ''}<b>Técnico:</b> ${esc(t.tecnicoSim)}` : ''}
+    </div>` : ''}
+    ${grupoHTML('Instructores', c.ins, c.pIns, c.libIns, c.totIns, c.ocupIns)}
+    ${grupoHTML('Instructores en formación', c.asi, c.pFor, c.libFor, c.totFor, c.ocupFor)}
   </div>`;
 }
 
 /* ── paso 3: postularse ──────────────────────────────── */
 function pintarTalleres() {
-  const ya = new Set(mios().map(t => t.id));
+  const ya = new Set(misTalleres().map(t => t.id));   // asignados Y ya postulados
   const libres = talleres.filter(t => !ya.has(t.id));
   const orden = { lunes:1, martes:2, miercoles:3, jueves:4, viernes:5, sabado:6, domingo:7 };
-  libres.sort((a, b) => (b.faltan > 0) - (a.faltan > 0)
+  libres.sort((a, b) => (cupos(b).libIns > 0) - (cupos(a).libIns > 0)
     || (orden[a.day]||9) - (orden[b.day]||9) || a.startHour - b.startHour);
 
   $('talleres').innerHTML = libres.map(t => {
-    const falta = t.faltan > 0;
+    const c = cupos(t), falta = c.libIns > 0;
     return `
     <div class="taller" id="t${t.id}">
       <div class="fila">
@@ -266,8 +406,8 @@ function pintarTalleres() {
         <label for="k${t.id}" style="margin:0;flex:1;cursor:pointer">
           <span class="tit">${esc(t.title)}</span>
           <div class="meta">${esc(t.dayLabel)} · ${esc(t.time || 'horario a confirmar')}<br>${esc(t.location)}</div>
-          <span class="tag ${falta ? 't-falta' : 't-ok'}">${falta ? 'Faltan ' + t.faltan : 'Equipo completo'}</span>
-          <span class="tag t-form">${t.cuposFormacion} lugares de formación</span>
+          <span class="tag ${falta ? 't-falta' : 't-ok'}">${falta ? 'Faltan ' + c.libIns + ' instructor' + (c.libIns === 1 ? '' : 'es') : 'Instructores completo'}</span>
+          ${c.totFor ? `<span class="tag t-form">${c.libFor ? c.libFor + ' lugar' + (c.libFor === 1 ? '' : 'es') + ' de formación' : 'Formación completa'}</span>` : ''}
         </label>
       </div>
       ${t.descripcion ? `
@@ -280,9 +420,11 @@ function pintarTalleres() {
         <label>¿Cómo te sumás?</label>
         <div class="radios" id="r${t.id}">
           ${falta ? `<label onclick="rol(${t.id},'instructor')">
-            <input type="radio" name="rol${t.id}" value="instructor">Como instructor</label>` : ''}
-          <label onclick="rol(${t.id},'formacion')">
-            <input type="radio" name="rol${t.id}" value="formacion">En formación (observador)</label>
+            <input type="radio" name="rol${t.id}" value="instructor">Como instructor (${c.libIns} libre${c.libIns === 1 ? '' : 's'})</label>` : ''}
+          ${c.libFor ? `<label onclick="rol(${t.id},'formacion')">
+            <input type="radio" name="rol${t.id}" value="formacion">En formación · observador (${c.libFor} libre${c.libFor === 1 ? '' : 's'})</label>` : ''}
+          ${!falta && !c.libFor ? `<label onclick="rol(${t.id},'formacion')">
+            <input type="radio" name="rol${t.id}" value="formacion">Sin lugares libres · anotarme en lista de espera</label>` : ''}
         </div>
         <label>¿Tenés experiencia previa en este taller o en el tema?</label>
         <textarea oninput="post[${t.id}].experiencia=this.value"
@@ -296,7 +438,7 @@ function toggle(id, on) {
   $('x' + id).classList.toggle('oculto', !on);
   if (on) {
     const t = talleres.find(e => e.id === id);
-    post[id] = { rol: t.faltan > 0 ? 'instructor' : 'formacion', experiencia: '' };
+    post[id] = { rol: cupos(t).libIns > 0 ? 'instructor' : 'formacion', experiencia: '' };
     const r = $('r' + id).querySelector('input');
     if (r) { r.checked = true; r.closest('label').classList.add('on'); }
   } else delete post[id];
@@ -322,15 +464,21 @@ async function enviar() {
       const ev = await r.json();
 
       ev.forEach(e => {
-        if (conf[e.id]) {
-          e.confirmaciones = (e.confirmaciones || []).filter(c => norm(c.nombre) !== norm(yo));
+        if (conf[e.id] && !conf[e.id].previo) {
+          e.confirmaciones = (e.confirmaciones || []).filter(c => !esMio(c.nombre));
           e.confirmaciones.push({ nombre: yo, contacto,
             estado: conf[e.id].estado, motivo: conf[e.id].motivo || '', fecha: sello });
         }
         if (post[e.id]) {
-          e.postulaciones = (e.postulaciones || []).filter(p => norm(p.nombre) !== norm(yo));
+          e.postulaciones = (e.postulaciones || []).filter(p => !esMio(p.nombre));
           e.postulaciones.push({ nombre: yo, contacto, rol: post[e.id].rol,
             experiencia: post[e.id].experiencia || '', fecha: sello });
+        }
+        // Baja: se marca, no se borra, para que quede el rastro para el comité.
+        if (bajas[e.id]) {
+          (e.postulaciones || []).forEach(p => {
+            if (esMio(p.nombre) && p.estado !== 'baja') { p.estado = 'baja'; p.fechaBaja = sello; }
+          });
         }
       });
 
@@ -341,13 +489,14 @@ async function enviar() {
       // verificar que quedó guardado
       await new Promise(s => setTimeout(s, 1200));
       const v = await (await fetch(API + '?t=' + Date.now())).json();
-      const ids = [...Object.keys(conf), ...Object.keys(post)].map(Number);
-      const ok = ids.every(id => {
-        const e = v.find(x => x.id === id);
-        if (!e) return false;
-        return (e.confirmaciones || []).some(c => c.fecha === sello)
-            || (e.postulaciones || []).some(p => p.fecha === sello);
-      });
+      const ok = [
+        ...Object.keys(conf).filter(id => !conf[id].previo)
+            .map(id => [+id, e => (e.confirmaciones || []).some(c => c.fecha === sello)]),
+        ...Object.keys(post)
+            .map(id => [+id, e => (e.postulaciones || []).some(p => p.fecha === sello)]),
+        ...Object.keys(bajas)
+            .map(id => [+id, e => (e.postulaciones || []).some(p => esMio(p.nombre) && p.fechaBaja === sello)])
+      ].every(([id, test]) => { const e = v.find(x => x.id === id); return e ? test(e) : false; });
       if (ok) return terminar();
       if (intento === 4) throw new Error('no se pudo confirmar el guardado');
       await new Promise(s => setTimeout(s, 800 * intento));
@@ -365,8 +514,13 @@ async function enviar() {
 function terminar() {
   const li = [];
   Object.entries(conf).forEach(([id, c]) => {
+    if (c.previo) return;                       // no lo tocó, no es novedad
     const t = talleres.find(e => e.id === +id);
     li.push(`<li>${c.estado === 'confirmado' ? '✅ Confirmaste' : '❌ Avisaste que no podés en'}: ${esc(t.title)}</li>`);
+  });
+  Object.keys(bajas).forEach(id => {
+    const t = talleres.find(e => e.id === +id);
+    li.push(`<li>🚪 Te bajaste de: ${esc(t.title)}</li>`);
   });
   Object.entries(post).forEach(([id, p]) => {
     const t = talleres.find(e => e.id === +id);
@@ -392,16 +546,20 @@ $('accion').addEventListener('click', () => {
     paso = 2;
     $('accion').textContent = 'Siguiente';
   } else if (paso === 2) {
+    // Solo bloquea los asignados que nunca respondió; los ya confirmados pasan.
     const pend = mios().filter(t => !conf[t.id]);
-    if (pend.length) return mostrarError('Marcá "Confirmo" o "No puedo" en los ' + pend.length + ' taller(es) que ya tenés asignados.');
+    if (pend.length) return mostrarError('Marcá "Confirmo" o "No puedo" en los ' + pend.length + ' taller(es) asignados que todavía no respondiste.');
     pintarTalleres();
     $('p2').classList.add('oculto');
     $('p3').classList.remove('oculto');
     paso = 3;
     $('accion').textContent = 'Enviar';
   } else {
-    if (!Object.keys(conf).length && !Object.keys(post).length)
+    if (!hayCambios()) {
+      // Ya tenía todo respondido y no cambió nada: no hace falta escribir.
+      if (misTalleres().length) return terminar();
       return mostrarError('Elegí al menos un taller antes de enviar.');
+    }
     enviar();
   }
   window.scrollTo({ top: 0, behavior: 'smooth' });

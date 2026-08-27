@@ -855,6 +855,36 @@
             gap: 5px;
         }
 
+        /* Postulaciones con acciones (modo edicion) */
+        .post-row {
+            display: flex; gap: 10px; align-items: flex-start; justify-content: space-between;
+            background: rgba(255,255,255,0.1); border-radius: 10px;
+            padding: 8px 12px; margin-bottom: 6px; font-size: 0.85rem;
+        }
+        .post-row.aprobada { background: rgba(46,160,90,0.22); }
+        .post-row.rechazada, .post-row.baja { background: rgba(255,255,255,0.05); opacity: 0.55; }
+        .post-info { flex: 1; min-width: 0; }
+        .post-meta { font-size: 0.78rem; opacity: 0.8; margin-top: 2px; }
+        .post-badge {
+            display: inline-block; font-size: 0.7rem; font-weight: 700; letter-spacing: .4px;
+            padding: 2px 8px; border-radius: 999px; margin-left: 6px; vertical-align: middle;
+            background: rgba(255,255,255,0.18);
+        }
+        .post-row.pendiente .post-badge { background: #d98a00; color: #fff; }
+        .post-row.aprobada .post-badge { background: #1e7a4a; color: #fff; }
+        .post-acts { display: flex; gap: 6px; flex: 0 0 auto; }
+        .post-acts button {
+            border: 0; border-radius: 8px; padding: 6px 10px; cursor: pointer;
+            font-size: 0.78rem; font-weight: 700; font-family: inherit;
+        }
+        .post-acts .ap { background: #1e7a4a; color: #fff; }
+        .post-acts .re { background: rgba(255,255,255,0.18); color: #fff; }
+        @media (max-width: 640px) {
+            .post-row { flex-direction: column; }
+            .post-acts { width: 100%; }
+            .post-acts button { flex: 1; }
+        }
+
         .notes-text {
             font-style: italic;
             opacity: 0.9;
@@ -1375,7 +1405,8 @@
                 <div class="check-grid" id="exportTypes"></div>
             </div>
             <div class="form-group">
-                <label><input type="checkbox" id="expTeam" checked style="width:auto;margin-right:8px"> Incluir equipo asignado (coordinadores, instructores, ponentes)</label>
+                <label><input type="checkbox" id="expTeam" checked style="width:auto;margin-right:8px"> Incluir equipo y cupos (coordina, instructores, formación, sin cubrir)</label>
+                <label><input type="checkbox" id="expPend" style="width:auto;margin-right:8px"> Incluir postulaciones pendientes de aprobar</label>
             </div>
             <div class="modal-actions">
                 <button class="toolbar-btn btn-secondary" onclick="closeExportModal()">Cancelar</button>
@@ -2090,6 +2121,107 @@
             }, 2000);
         }
 
+        /* ---- Identidad de personas (compartido con postulacion.html) ---- */
+        function normNombre(s) {
+            return String(s || '').toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/\s*\(.*?\)\s*/g, ' ')
+                .replace(/\b(dr|dra|lic|prof)\.?\s*/g, '')
+                .replace(/[^a-z0-9 ]/g, ' ')
+                .replace(/\s+/g, ' ').trim();
+        }
+        // Dos nombres son la misma persona si normalizan igual, o si todas las
+        // palabras del mas corto estan en el mas largo (min 2 palabras, para que
+        // un apellido suelto no matchee de mas y muestre datos de otro).
+        function mismaPersona(a, b) {
+            const x = normNombre(a), y = normNombre(b);
+            if (!x || !y) return false;
+            if (x === y) return true;
+            const wx = x.split(' '), wy = y.split(' ');
+            const [corto, largo] = wx.length <= wy.length ? [wx, wy] : [wy, wx];
+            return corto.length >= 2 && corto.every(w => largo.includes(w));
+        }
+        function enElEquipo(event, nombre) {
+            return [...(event.instructores || []), ...(event.coordinators || []), ...(event.asistentes || [])]
+                .some(x => mismaPersona(x, nombre));
+        }
+
+        /* ---- Postulaciones: aprobar / rechazar / quitar ---- */
+        function estadoPostulacion(event, p) {
+            if (p.estado === 'baja') return 'baja';
+            if (p.estado === 'rechazada') return 'rechazada';
+            if (enElEquipo(event, p.nombre)) return 'aprobada';
+            return 'pendiente';
+        }
+        /* `faltan` NO se puede recalcular como requeridos - instructores.length:
+           una entrada de instructores[] puede empaquetar varias personas
+           ("Vía Aérea: Dra. López · Dra. Carreño"). Es un contador curado a mano,
+           asi que se ajusta de a uno al aprobar o quitar. */
+        function ajustarFaltan(event, delta) {
+            if (typeof event.faltan !== 'number') return;
+            const tope = typeof event.requeridos === 'number' ? event.requeridos : 99;
+            event.faltan = Math.min(tope, Math.max(0, event.faltan + delta));
+        }
+        function refrescarDetalle(event) {
+            renderSchedule();
+            showEventDetails(event);
+        }
+        function aprobarPostulacion(eventId, idx) {
+            const event = events.find(e => e.id == eventId);
+            if (!event) return;
+            const p = (event.postulaciones || [])[idx];
+            if (!p) return;
+            const campo = p.rol === 'formacion' ? 'asistentes' : 'instructores';
+            const tope = campo === 'asistentes' ? 4 : 6;
+            event[campo] = event[campo] || [];
+            if (enElEquipo(event, p.nombre)) { showToast(p.nombre + ' ya esta en el equipo', 'info'); return; }
+            // El formulario de edicion solo tiene 6 slots de instructor y 4 de
+            // asistente: pasarse los borraria silenciosamente al editar.
+            if (event[campo].length >= tope) {
+                showToast('No entra: ' + campo + ' ya tiene ' + tope + ' (el maximo del formulario)', 'warning');
+                return;
+            }
+            const c = cuposEvento(event);
+            const libres = campo === 'instructores' ? c.libIns : c.libFor;
+            if (!libres && !confirm('Este taller no tiene lugares libres de ' +
+                (campo === 'instructores' ? 'instructor' : 'formación') +
+                '.\n\n¿Sumarlo igual (queda por encima del cupo)?')) return;
+            event[campo].push(p.nombre);
+            p.estado = 'aprobada';
+            p.fechaAprobacion = new Date().toISOString();
+            if (campo === 'instructores') ajustarFaltan(event, -1);
+            saveData();
+            showToast(p.nombre + ' sumado a ' + campo, 'success');
+            refrescarDetalle(event);
+        }
+        function rechazarPostulacion(eventId, idx) {
+            const event = events.find(e => e.id == eventId);
+            if (!event) return;
+            const p = (event.postulaciones || [])[idx];
+            if (!p) return;
+            if (!confirm('Rechazar la postulacion de ' + p.nombre + '?\n\nQueda registrada como rechazada; podes revertirlo editando el evento.')) return;
+            p.estado = 'rechazada';
+            p.fechaRechazo = new Date().toISOString();
+            saveData();
+            showToast('Postulacion de ' + p.nombre + ' rechazada', 'info');
+            refrescarDetalle(event);
+        }
+        function quitarDelEquipo(eventId, idx) {
+            const event = events.find(e => e.id == eventId);
+            if (!event) return;
+            const p = (event.postulaciones || [])[idx];
+            if (!p) return;
+            ['instructores', 'coordinators', 'asistentes'].forEach(campo => {
+                if (event[campo]) event[campo] = event[campo].filter(x => !mismaPersona(x, p.nombre));
+            });
+            delete p.estado;
+            delete p.fechaAprobacion;
+            if (p.rol !== 'formacion') ajustarFaltan(event, +1);
+            saveData();
+            showToast(p.nombre + ' quitado del equipo (vuelve a pendiente)', 'info');
+            refrescarDetalle(event);
+        }
+
         // Show toast notification
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
@@ -2646,9 +2778,26 @@
 
                     ${(event.postulaciones || []).length > 0 ? `
                     <div class="info-card speakers-card">
-                        <div class="info-label">Postulaciones (${event.postulaciones.length})</div>
-                        <div class="speaker-list">
-                            ${event.postulaciones.map(p => `<span class="speaker-chip">${p.rol === 'formacion' ? '🎓' : '🙋'} ${p.nombre}${p.contacto ? ' · ' + p.contacto : ''}${p.experiencia ? ' · ' + p.experiencia : ''}</span>`).join('')}
+                        <div class="info-label">Postulaciones (${(event.postulaciones || []).filter(p => estadoPostulacion(event, p) === 'pendiente').length} pendientes de ${event.postulaciones.length})</div>
+                        <div>
+                            ${event.postulaciones.map((p, i) => {
+                                const st = estadoPostulacion(event, p);
+                                const badge = { pendiente: 'PENDIENTE', aprobada: 'EN EL EQUIPO', rechazada: 'RECHAZADA', baja: 'SE DIO DE BAJA' }[st];
+                                return `<div class="post-row ${st}">
+                                    <div class="post-info">
+                                        <b>${p.rol === 'formacion' ? '🎓' : '🙋'} ${p.nombre}</b><span class="post-badge">${badge}</span>
+                                        <div class="post-meta">${p.rol === 'formacion' ? 'En formación (observador)' : 'Como instructor'}${p.contacto ? ' · ' + p.contacto : ''}${p.fecha ? ' · ' + p.fecha.slice(8,10) + '/' + p.fecha.slice(5,7) : ''}</div>
+                                        ${p.experiencia ? `<div class="post-meta">“${p.experiencia}”</div>` : ''}
+                                    </div>
+                                    ${editMode && st === 'pendiente' ? `<div class="post-acts">
+                                        <button class="ap" onclick="aprobarPostulacion(${event.id},${i})">✅ Aprobar</button>
+                                        <button class="re" onclick="rechazarPostulacion(${event.id},${i})">✖ Rechazar</button>
+                                    </div>` : ''}
+                                    ${editMode && st === 'aprobada' ? `<div class="post-acts">
+                                        <button class="re" onclick="quitarDelEquipo(${event.id},${i})">↩ Quitar del equipo</button>
+                                    </div>` : ''}
+                                </div>`;
+                            }).join('')}
                         </div>
                     </div>
                     ` : ''}
@@ -2969,11 +3118,52 @@
                 return formatTime(e.startHour) + (typeof e.endHour === 'number' ? '–'+formatTime(e.endHour) : '');
             return '';
         }
-        function expEquipoInstr(e){
-            let ins = [...(e.instructores||[]), ...(e.speakers||[]), ...(e.asistentes||[])]
-                .map(s => String(s).trim()).filter(Boolean).join(', ');
-            if (e.tecnicoSim) ins += (ins ? ' · ' : '') + 'Téc: ' + e.tecnicoSim;
-            return ins;
+        // Cupos discriminados: quien ocupa, cuantos faltan, instructor vs formacion.
+        function cuposEvento(e){
+            const lim = a => (a||[]).map(x => String(x).replace(/\s*\(invitado\)\s*/i,'').trim()).filter(Boolean);
+            const ins = lim(e.instructores), asi = lim(e.asistentes), co = lim(e.coordinators);
+            const pend = (e.postulaciones||[]).filter(p => p.estado !== 'baja' && p.estado !== 'rechazada'
+                && ![...ins,...asi,...co].some(x => mismaPersona(x, p.nombre)));
+            const totIns = typeof e.requeridos === 'number' ? e.requeridos : null;
+            const totFor = typeof e.cuposFormacion === 'number' ? e.cuposFormacion : null;
+            // Una entrada de instructores[] puede empaquetar varias personas, asi
+            // que .length no son los cupos ocupados: manda `faltan`, que se cura a mano.
+            const libIns = typeof e.faltan === 'number' ? Math.max(0, e.faltan)
+                         : (totIns === null ? 0 : Math.max(0, totIns - ins.length));
+            return { ins, asi, co, inv: lim(e.speakers),
+                pIns: pend.filter(p => p.rol !== 'formacion').map(p => p.nombre),
+                pFor: pend.filter(p => p.rol === 'formacion').map(p => p.nombre),
+                totIns, totFor, libIns,
+                ocupIns: totIns === null ? ins.length : Math.max(ins.length, totIns - libIns),
+                libFor: totFor === null ? 0 : Math.max(0, totFor - asi.length) };
+        }
+        // Columna "Instructores / Ponentes": conteo + nombres (+ pendientes si se pidio)
+        function expEquipoInstr(e, verPend){
+            const c = cuposEvento(e);
+            const gente = [...c.ins, ...c.inv].join(', ');
+            const cnt = c.totIns === null ? '' : c.ocupIns + '/' + c.totIns + (gente ? ' · ' : '');
+            let out = cnt + gente;
+            if (verPend && c.pIns.length) out += (out ? '\n' : '') + 'Pendientes: ' + c.pIns.join(', ');
+            if (e.tecnicoSim) out += (out ? '\n' : '') + 'Téc: ' + e.tecnicoSim;
+            return out;
+        }
+        // Columna "Instructores en formacion"
+        function expFormacion(e, verPend){
+            const c = cuposEvento(e);
+            if (c.totFor === null && !c.asi.length) return '';
+            const cnt = c.totFor === null ? '' : c.asi.length + '/' + c.totFor + (c.asi.length ? ' · ' : '');
+            let out = cnt + c.asi.join(', ');
+            if (verPend && c.pFor.length) out += (out ? '\n' : '') + 'Pendientes: ' + c.pFor.join(', ');
+            return out;
+        }
+        // Columna "Sin cubrir"
+        function expSinCubrir(e){
+            const c = cuposEvento(e);
+            const p = [];
+            if (c.libIns) p.push(c.libIns + ' instructor' + (c.libIns === 1 ? '' : 'es'));
+            if (c.libFor) p.push(c.libFor + ' formación');
+            if (c.totIns === null && c.totFor === null) return '';
+            return p.length ? p.join(' · ') : 'completo';
         }
 
         function openExportModal(){
@@ -2996,11 +3186,13 @@
             const days = [...document.querySelectorAll('.exp-day:checked')].map(c => c.value);
             const typeKeys = [...document.querySelectorAll('.exp-type:checked')].map(c => c.value);
             const includeTeam = document.getElementById('expTeam').checked;
+            const includePend = document.getElementById('expPend').checked;
             const groupsSel = EXPORT_GROUPS.filter(g => typeKeys.includes(g.key));
             const typeOk = t => groupsSel.some(g => g.match(t));
 
             const headers = includeTeam
-                ? ['Hora','Actividad','Tipo','Lugar','Coordina','Instructores / Ponentes','Cupos','Notas']
+                ? ['Hora','Actividad','Tipo','Lugar','Coordina','Instructores / Ponentes',
+                   'Instructores en formación','Sin cubrir','Cupos','Notas']
                 : ['Hora','Actividad','Tipo','Lugar','Cupos','Notas'];
 
             const order = [...dayOrder, 'otros'];
@@ -3014,7 +3206,8 @@
                     .sort((a,b) => (a.startHour||0) - (b.startHour||0));
                 if (!rows.length) return;
                 groups.push({ label, rows: rows.map(e => includeTeam
-                    ? [expHora(e), e.title||'', typeLabel(e.type), e.location||'', (e.coordinators||[]).join(', '), expEquipoInstr(e), e.cupos||'', e.notes||'']
+                    ? [expHora(e), e.title||'', typeLabel(e.type), e.location||'', (e.coordinators||[]).join(', '),
+                       expEquipoInstr(e, includePend), expFormacion(e, includePend), expSinCubrir(e), e.cupos||'', e.notes||'']
                     : [expHora(e), e.title||'', typeLabel(e.type), e.location||'', e.cupos||'', e.notes||'']) });
             });
             return { headers, groups, count: groups.reduce((n,g)=>n+g.rows.length,0) };
@@ -3038,7 +3231,8 @@
             groups.forEach(g => {
                 t += `<tr><td colspan="${nc}" style="background:#d9e2f3;color:#1f3864;font-weight:bold;padding:6px">${esc(g.label)}</td></tr>`;
                 g.rows.forEach(r => {
-                    t += '<tr>' + r.map((c,i) => `<td style="padding:5px;vertical-align:top${i===0?';white-space:nowrap':''}">${esc(c)}</td>`).join('') + '</tr>';
+                    // pre-line: las celdas de equipo/pendientes llevan saltos de linea
+                    t += '<tr>' + r.map((c,i) => `<td style="padding:5px;vertical-align:top;${i===0?'white-space:nowrap':'white-space:pre-line'}">${esc(c)}</td>`).join('') + '</tr>';
                 });
             });
             t += '</table>';
