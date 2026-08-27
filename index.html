@@ -1443,6 +1443,38 @@
                 <button class="modal-close" onclick="closePostulaciones()">&times;</button>
             </div>
             <div id="postAviso"></div>
+            <div id="postAltaBar"></div>
+            <div id="postAlta" style="display:none;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:14px;margin-bottom:12px">
+                <div class="form-group">
+                    <label>Taller</label>
+                    <select id="altaEvento"></select>
+                </div>
+                <div class="form-group">
+                    <label>Nombre y apellido</label>
+                    <input type="text" id="altaNombre" list="altaConocidos" placeholder="Ej: Dra. Natalia Freijido" autocomplete="off">
+                    <datalist id="altaConocidos"></datalist>
+                </div>
+                <div class="form-group">
+                    <label>Teléfono o mail (opcional)</label>
+                    <input type="text" id="altaContacto" placeholder="099 123 456">
+                </div>
+                <div class="form-group">
+                    <label>Se suma como</label>
+                    <select id="altaRol">
+                        <option value="instructor">Instructor</option>
+                        <option value="formacion">En formación (observador)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Nota / experiencia (opcional)</label>
+                    <input type="text" id="altaExp" placeholder="Ej: me lo pidió por WhatsApp, ya hizo VORTEX">
+                </div>
+                <div class="modal-actions" style="margin-top:4px">
+                    <button class="toolbar-btn btn-secondary" onclick="cerrarAlta()">Cancelar</button>
+                    <button class="toolbar-btn btn-secondary" onclick="guardarPostulacionManual(false)">Dejar pendiente</button>
+                    <button class="toolbar-btn btn-success" onclick="guardarPostulacionManual(true)">Agregar y aprobar</button>
+                </div>
+            </div>
             <div class="form-group" style="margin-bottom:10px">
                 <label style="display:flex;align-items:center;gap:8px;margin:0">
                     <input type="checkbox" id="postSoloPend" checked style="width:auto;margin:0" onchange="renderPostulaciones()">
@@ -2218,13 +2250,67 @@
         }
         function openPostulaciones() {
             document.getElementById('postModal').classList.add('visible');
+            cerrarAlta();
             renderPostulaciones();
+        }
+        /* ---- Alta manual: el comite anota a alguien que aviso por fuera ---- */
+        function abrirAlta() {
+            const orden = { sabado:1, domingo:2, lunes:3, martes:4, miercoles:5, jueves:6, viernes:7 };
+            const lista = [...events].sort((a, b) =>
+                (orden[a.day]||9) - (orden[b.day]||9) || (a.startHour||0) - (b.startHour||0));
+            document.getElementById('altaEvento').innerHTML = lista.map(e => {
+                const c = cuposEvento(e);
+                const cup = c.totIns === null ? '' :
+                    ` — instr ${c.ocupIns}/${c.totIns}${c.totFor !== null ? `, form ${c.asi.length}/${c.totFor}` : ''}`;
+                return `<option value="${e.id}">${esc((dayLabels[e.day]||'').split(' ')[0])} ${esc(e.time||'')} · ${esc(e.title)}${esc(cup)}</option>`;
+            }).join('');
+            // nombres ya conocidos, para no duplicar a la misma persona escrita distinto
+            const nombres = new Set();
+            events.forEach(e => [...(e.instructores||[]), ...(e.coordinators||[]), ...(e.asistentes||[]),
+                                 ...(e.postulaciones||[]).map(x => x.nombre)]
+                .forEach(n => n && nombres.add(String(n).replace(/\s*\(.*?\)\s*/g,'').trim())));
+            document.getElementById('altaConocidos').innerHTML =
+                [...nombres].sort().map(n => `<option value="${esc(n)}"></option>`).join('');
+            ['altaNombre','altaContacto','altaExp'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('altaRol').value = 'instructor';
+            document.getElementById('postAlta').style.display = '';
+            document.getElementById('altaNombre').focus();
+        }
+        function cerrarAlta() { document.getElementById('postAlta').style.display = 'none'; }
+        function guardarPostulacionManual(aprobar) {
+            const nombre = document.getElementById('altaNombre').value.trim();
+            if (nombre.length < 4) { showToast('Escribí nombre y apellido', 'warning'); return; }
+            const event = events.find(e => e.id == document.getElementById('altaEvento').value);
+            if (!event) { showToast('Elegí un taller', 'warning'); return; }
+            const rol = document.getElementById('altaRol').value;
+            event.postulaciones = event.postulaciones || [];
+            const dup = event.postulaciones.find(x => mismaPersona(x.nombre, nombre)
+                && x.estado !== 'baja' && x.estado !== 'rechazada');
+            if (dup && !confirm(dup.nombre + ' ya figura en este taller.\n\n¿Agregarlo igual?')) return;
+            event.postulaciones.push({
+                nombre, contacto: document.getElementById('altaContacto').value.trim(),
+                rol, experiencia: document.getElementById('altaExp').value.trim(),
+                fecha: new Date().toISOString(), origen: 'comite'
+            });
+            cerrarAlta();
+            if (aprobar) {
+                // reusa los controles de cupo/tope y el ajuste de `faltan`
+                aprobarPostulacion(event.id, event.postulaciones.length - 1);
+            } else {
+                saveData();
+                showToast(nombre + ' agregado como pendiente', 'success');
+                refrescarDetalle(event);
+            }
         }
         function closePostulaciones() {
             document.getElementById('postModal').classList.remove('visible');
         }
         function renderPostulaciones() {
             const solo = document.getElementById('postSoloPend').checked;
+            document.getElementById('postAltaBar').innerHTML = editMode
+                ? `<div style="margin-bottom:12px"><button class="toolbar-btn btn-success" onclick="abrirAlta()">➕ Agregar postulación</button></div>`
+                : '';
+            if (!editMode) cerrarAlta();
             document.getElementById('postAviso').innerHTML = editMode ? '' :
                 `<div class="post-alerta"><span>⚠️ Para aprobar o rechazar necesitás el modo edición.</span>
                  <button class="toolbar-btn btn-primary" onclick="toggleEditMode(); renderPostulaciones()">Activar modo edición</button></div>`;
@@ -2255,7 +2341,7 @@
                         return `<div class="post-row ${st}">
                             <div class="post-info">
                                 <b>${p.rol === 'formacion' ? '🎓' : '🙋'} ${esc(p.nombre)}</b><span class="post-badge">${badge}</span>
-                                <div class="post-meta">${p.rol === 'formacion' ? 'En formación (observador)' : 'Como instructor'}${p.contacto ? ' · ' + esc(p.contacto) : ''}${p.fecha ? ' · ' + p.fecha.slice(8,10) + '/' + p.fecha.slice(5,7) : ''}</div>
+                                <div class="post-meta">${p.rol === 'formacion' ? 'En formación (observador)' : 'Como instructor'}${p.contacto ? ' · ' + esc(p.contacto) : ''}${p.fecha ? ' · ' + p.fecha.slice(8,10) + '/' + p.fecha.slice(5,7) : ''}${p.origen === 'comite' ? ' · cargada por el comité' : ''}</div>
                                 ${p.experiencia ? `<div class="post-meta">“${esc(p.experiencia)}”</div>` : ''}
                             </div>
                             ${editMode && st === 'pendiente' ? `<div class="post-acts">
