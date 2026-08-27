@@ -855,6 +855,22 @@
             gap: 5px;
         }
 
+        .badge-num {
+            display: inline-block; min-width: 20px; padding: 1px 7px; margin-left: 6px;
+            border-radius: 999px; background: #d98a00; color: #fff;
+            font-size: 0.75rem; font-weight: 800; vertical-align: middle;
+        }
+        .post-taller {
+            margin-top: 14px; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.12);
+        }
+        .post-taller h4 { margin: 0 0 2px; font-size: 0.95rem; }
+        .post-taller .sub { font-size: 0.78rem; opacity: 0.75; }
+        .post-vacio { opacity: 0.7; padding: 18px 0; text-align: center; }
+        .post-alerta {
+            background: rgba(217,138,0,0.18); border: 1px solid rgba(217,138,0,0.5);
+            border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-size: 0.85rem;
+            display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+        }
         /* Postulaciones con acciones (modo edicion) */
         .post-row {
             display: flex; gap: 10px; align-items: flex-start; justify-content: space-between;
@@ -1147,6 +1163,9 @@
         <button class="toolbar-btn btn-success edit-only" style="display:none" onclick="openFormsManager()">
             📝 Formularios
         </button>
+        <button class="toolbar-btn btn-secondary" id="postBtn" onclick="openPostulaciones()">
+            🙋 Postulaciones
+        </button>
         <button class="toolbar-btn btn-secondary" onclick="openExportModal()">
             📊 Exportar (Excel / PDF)
         </button>
@@ -1412,6 +1431,27 @@
                 <button class="toolbar-btn btn-secondary" onclick="closeExportModal()">Cancelar</button>
                 <button class="toolbar-btn btn-success" onclick="exportPDF()">📄 PDF (imprimir)</button>
                 <button class="toolbar-btn btn-success" onclick="exportExcel()">📗 Excel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel global de postulaciones -->
+    <div class="modal" id="postModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🙋 Postulaciones</h2>
+                <button class="modal-close" onclick="closePostulaciones()">&times;</button>
+            </div>
+            <div id="postAviso"></div>
+            <div class="form-group" style="margin-bottom:10px">
+                <label style="display:flex;align-items:center;gap:8px;margin:0">
+                    <input type="checkbox" id="postSoloPend" checked style="width:auto;margin:0" onchange="renderPostulaciones()">
+                    Ver solo las pendientes
+                </label>
+            </div>
+            <div id="postBody"></div>
+            <div class="modal-actions">
+                <button class="toolbar-btn btn-secondary" onclick="closePostulaciones()">Cerrar</button>
             </div>
         </div>
     </div>
@@ -2064,6 +2104,7 @@
                         events = cloudEvents;
                         nextId = Math.max(...events.map(e => e.id || 0)) + 1;
                         renderSchedule();
+                        actualizarBadgePostulaciones();
                     }
                 }
             } catch (e) {
@@ -2162,9 +2203,78 @@
             const tope = typeof event.requeridos === 'number' ? event.requeridos : 99;
             event.faltan = Math.min(tope, Math.max(0, event.faltan + delta));
         }
+        /* ---- Panel global de postulaciones ---- */
+        function pendientesDe(e) {
+            return (e.postulaciones || []).filter(p => estadoPostulacion(e, p) === 'pendiente');
+        }
+        function contarPendientes() {
+            return events.reduce((n, e) => n + pendientesDe(e).length, 0);
+        }
+        function actualizarBadgePostulaciones() {
+            const b = document.getElementById('postBtn');
+            if (!b) return;
+            const n = contarPendientes();
+            b.innerHTML = '🙋 Postulaciones' + (n ? ` <span class="badge-num">${n}</span>` : '');
+        }
+        function openPostulaciones() {
+            document.getElementById('postModal').classList.add('visible');
+            renderPostulaciones();
+        }
+        function closePostulaciones() {
+            document.getElementById('postModal').classList.remove('visible');
+        }
+        function renderPostulaciones() {
+            const solo = document.getElementById('postSoloPend').checked;
+            document.getElementById('postAviso').innerHTML = editMode ? '' :
+                `<div class="post-alerta"><span>⚠️ Para aprobar o rechazar necesitás el modo edición.</span>
+                 <button class="toolbar-btn btn-primary" onclick="toggleEditMode(); renderPostulaciones()">Activar modo edición</button></div>`;
+
+            const orden = { sabado:1, domingo:2, lunes:3, martes:4, miercoles:5, jueves:6, viernes:7 };
+            const conPost = events
+                .filter(e => (e.postulaciones || []).some(p => !solo || estadoPostulacion(e, p) === 'pendiente'))
+                .sort((a, b) => (orden[a.day]||9) - (orden[b.day]||9) || (a.startHour||0) - (b.startHour||0));
+
+            if (!conPost.length) {
+                document.getElementById('postBody').innerHTML =
+                    `<div class="post-vacio">${solo ? 'No hay postulaciones pendientes. 🎉' : 'Todavía no hay postulaciones.'}</div>`;
+                return;
+            }
+            document.getElementById('postBody').innerHTML = conPost.map(e => {
+                const c = cuposEvento(e);
+                const filas = (e.postulaciones || [])
+                    .map((p, i) => ({ p, i, st: estadoPostulacion(e, p) }))
+                    .filter(r => !solo || r.st === 'pendiente');
+                return `<div class="post-taller">
+                        <h4>${esc(e.title)}</h4>
+                        <div class="sub">${esc(dayLabels[e.day] || e.day || '')} · ${esc(e.time || '')} · ${esc(e.location || '')}</div>
+                        <div class="sub">Instructores ${c.ocupIns}/${c.totIns === null ? '?' : c.totIns}${c.libIns ? ' · ' + c.libIns + ' sin cubrir' : ' · completo'}
+                            ${c.totFor !== null ? ` &nbsp;|&nbsp; Formación ${c.asi.length}/${c.totFor}${c.libFor ? ' · ' + c.libFor + ' sin cubrir' : ' · completo'}` : ''}</div>
+                    </div>
+                    ${filas.map(({ p, i, st }) => {
+                        const badge = { pendiente:'PENDIENTE', aprobada:'EN EL EQUIPO', rechazada:'RECHAZADA', baja:'SE DIO DE BAJA' }[st];
+                        return `<div class="post-row ${st}">
+                            <div class="post-info">
+                                <b>${p.rol === 'formacion' ? '🎓' : '🙋'} ${esc(p.nombre)}</b><span class="post-badge">${badge}</span>
+                                <div class="post-meta">${p.rol === 'formacion' ? 'En formación (observador)' : 'Como instructor'}${p.contacto ? ' · ' + esc(p.contacto) : ''}${p.fecha ? ' · ' + p.fecha.slice(8,10) + '/' + p.fecha.slice(5,7) : ''}</div>
+                                ${p.experiencia ? `<div class="post-meta">“${esc(p.experiencia)}”</div>` : ''}
+                            </div>
+                            ${editMode && st === 'pendiente' ? `<div class="post-acts">
+                                <button class="ap" onclick="aprobarPostulacion(${e.id},${i})">✅ Aprobar</button>
+                                <button class="re" onclick="rechazarPostulacion(${e.id},${i})">✖ Rechazar</button>
+                            </div>` : ''}
+                            ${editMode && st === 'aprobada' ? `<div class="post-acts">
+                                <button class="re" onclick="quitarDelEquipo(${e.id},${i})">↩ Quitar</button>
+                            </div>` : ''}
+                        </div>`;
+                    }).join('')}`;
+            }).join('');
+        }
+        // Refresca lo que este abierto: el panel global o el detalle del taller.
         function refrescarDetalle(event) {
             renderSchedule();
-            showEventDetails(event);
+            actualizarBadgePostulaciones();
+            if (document.getElementById('postModal').classList.contains('visible')) renderPostulaciones();
+            else if (document.getElementById('editModal').classList.contains('visible')) showEventDetails(event);
         }
         function aprobarPostulacion(eventId, idx) {
             const event = events.find(e => e.id == eventId);
@@ -2246,6 +2356,7 @@
             document.getElementById('editModeBtn').style.display = editMode ? 'none' : '';
             document.querySelectorAll('.edit-only').forEach(btn => btn.style.display = editMode ? '' : 'none');
             renderSchedule();
+            actualizarBadgePostulaciones();
             showToast(editMode ? 'Modo edición activado' : 'Modo edición desactivado', editMode ? 'success' : 'info');
         }
 
@@ -2576,6 +2687,7 @@
 
                     div.innerHTML = `
                         ${editMode ? `<div class="event-actions">
+                            <button class="event-action-btn btn-edit" onclick="event.stopPropagation(); showEventDetails(events.find(x=>x.id===${event.id}))" title="Ver detalle y postulaciones">👁️</button>
                             <button class="event-action-btn btn-edit" onclick="event.stopPropagation(); editEvent(${event.id})" title="Editar">✏️</button>
                             <button class="event-action-btn btn-delete" onclick="event.stopPropagation(); deleteEvent(${event.id})" title="Eliminar">🗑️</button>
                         </div>` : ''}
