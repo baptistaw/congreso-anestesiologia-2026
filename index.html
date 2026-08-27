@@ -2183,7 +2183,7 @@
             return String(s || '').toLowerCase()
                 .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
                 .replace(/\s*\(.*?\)\s*/g, ' ')
-                .replace(/\b(dr|dra|lic|prof)\.?\s*/g, '')
+                .replace(/\b(dra|dr|lic|prof)\.?\s*/g, '')
                 .replace(/[^a-z0-9 ]/g, ' ')
                 .replace(/\s+/g, ' ').trim();
         }
