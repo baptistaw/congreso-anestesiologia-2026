@@ -10,9 +10,18 @@ export default {
       return new Response(null, { headers: cors });
     }
 
+    // no-store: el programa se edita en vivo, y sin esta cabecera el navegador
+    // servía datos viejos aunque KV ya estuviera actualizado.
     const json = (obj, status = 200) => new Response(
       typeof obj === 'string' ? obj : JSON.stringify(obj),
-      { status, headers: { ...cors, 'Content-Type': 'application/json' } }
+      {
+        status,
+        headers: {
+          ...cors,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store, must-revalidate',
+        },
+      }
     );
 
     const url = new URL(request.url);

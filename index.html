@@ -312,6 +312,36 @@
             position: relative;
         }
 
+        /* Banda de eventos del día que todavía no tienen horario asignado.
+           Van arriba del timeline en vez de estirarlo desde las 00:00. */
+        .day-untimed {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 8px 5px 4px 45px;
+        }
+
+        .day-untimed .event {
+            position: static;
+            flex: 1 1 240px;
+            min-width: 0;
+        }
+
+        .untimed-chip {
+            display: inline-block;
+            font-size: 0.65rem;
+            background: rgba(255,255,255,0.18);
+            padding: 1px 8px;
+            border-radius: 10px;
+            margin-bottom: 2px;
+        }
+
+        /* Pista de scroll horizontal: sólo aparece en mobile y sólo si el día
+           no entra en pantalla (la clase la pone renderSchedule al medir). */
+        .scroll-hint {
+            display: none;
+        }
+
         .event {
             padding: 6px 8px;
             border-radius: 6px;
@@ -701,6 +731,37 @@
             .events-area {
                 margin-left: 0;
                 min-width: calc(var(--tracks, 1) * 158px);
+            }
+
+            .day-untimed {
+                padding-left: 35px;
+            }
+
+            /* Gradiente sobre el borde derecho mientras quede contenido oculto.
+               Va en .day-content (que no scrollea) para que no se corra con él. */
+            .day-content.has-overflow::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                width: 26px;
+                background: linear-gradient(to left, rgba(10,14,30,0.85), rgba(10,14,30,0));
+                pointer-events: none;
+                z-index: 15;
+            }
+
+            .scroll-hint {
+                display: block;
+                font-size: 0.7rem;
+                color: rgba(255,255,255,0.55);
+                text-align: right;
+                padding: 4px 8px 2px;
+                letter-spacing: 0.2px;
+            }
+
+            .scroll-hint.hidden {
+                display: none;
             }
 
             .edit-mode .mobile-actions {
@@ -2113,7 +2174,10 @@
         // Load latest data from cloud on startup
         (async function loadFromCloud() {
             try {
-                const res = await fetch(API_URL);
+                // no-store: sin esto el navegador servía el programa cacheado y
+                // los cambios recién guardados no aparecían (los otros dos
+                // formularios ya bustean caché con ?t=).
+                const res = await fetch(API_URL, { cache: 'no-store' });
                 if (res.ok) {
                     const cloudEvents = await res.json();
                     if (Array.isArray(cloudEvents) && cloudEvents.length > 0) {
@@ -2543,10 +2607,17 @@
 
         }
 
+        // Un evento "sin horario" tiene día pero todavía no hora (time vacío).
+        // No entra al timeline: estiraría el día desde las 00:00.
+        function sinHorario(ev) {
+            return !ev.time || !String(ev.time).trim();
+        }
+
         function getDayTimeRange(dayEvents) {
-            if (dayEvents.length === 0) return { minHour: 8, maxHour: 20 };
+            const conHora = dayEvents.filter(ev => !sinHorario(ev));
+            if (conHora.length === 0) return { minHour: 8, maxHour: 20 };
             let min = Infinity, max = -Infinity;
-            dayEvents.forEach(ev => {
+            conHora.forEach(ev => {
                 if (ev.startHour < min) min = ev.startHour;
                 if (ev.endHour > max) max = ev.endHour;
             });
@@ -2656,9 +2727,14 @@
 
                 if (visibleEvents.length === 0 && !editMode) return;
 
+                // Los eventos sin horario van a una banda arriba del día; el
+                // timeline se calcula sólo con los que sí tienen hora.
+                const untimedEvents = visibleEvents.filter(sinHorario);
+                const timedEvents = visibleEvents.filter(ev => !sinHorario(ev));
+
                 // Assign tracks for overlapping events
-                assignTracks(visibleEvents);
-                const { minHour, maxHour } = getDayTimeRange(visibleEvents);
+                assignTracks(timedEvents);
+                const { minHour, maxHour } = getDayTimeRange(timedEvents);
                 const totalHeight = (maxHour - minHour) * PIXELS_PER_HOUR;
 
                 const column = document.createElement('div');
@@ -2702,7 +2778,7 @@
                 eventsArea.style.height = totalHeight + 'px';
                 // Máximo de tracks simultáneos del día: define el ancho mínimo
                 // para que en mobile las tarjetas no se aplasten.
-                const dayMaxTracks = visibleEvents.reduce((m, ev) => Math.max(m, ev._totalTracks || 1), 1);
+                const dayMaxTracks = timedEvents.reduce((m, ev) => Math.max(m, ev._totalTracks || 1), 1);
                 eventsArea.style.setProperty('--tracks', dayMaxTracks);
 
                 // Líneas de hora: dentro del área de eventos para que abarquen
@@ -2714,21 +2790,27 @@
                     eventsArea.appendChild(line);
                 }
 
-                visibleEvents.forEach(event => {
+                const untimedBand = document.createElement('div');
+                untimedBand.className = 'day-untimed';
+
+                [...untimedEvents, ...timedEvents].forEach(event => {
                     const div = document.createElement('div');
                     div.className = `event event-${event.type}`;
                     div.dataset.eventId = event.id;
+                    const noTime = sinHorario(event);
 
-                    // Position based on time and track
-                    const top = (event.startHour - minHour) * PIXELS_PER_HOUR;
-                    const height = Math.max((event.endHour - event.startHour) * PIXELS_PER_HOUR, 25);
-                    const trackWidth = 100 / (event._totalTracks || 1);
-                    const left = (event._track || 0) * trackWidth;
+                    if (!noTime) {
+                        // Position based on time and track
+                        const top = (event.startHour - minHour) * PIXELS_PER_HOUR;
+                        const height = Math.max((event.endHour - event.startHour) * PIXELS_PER_HOUR, 25);
+                        const trackWidth = 100 / (event._totalTracks || 1);
+                        const left = (event._track || 0) * trackWidth;
 
-                    div.style.top = top + 'px';
-                    div.style.height = height + 'px';
-                    div.style.left = left + '%';
-                    div.style.width = trackWidth + '%';
+                        div.style.top = top + 'px';
+                        div.style.height = height + 'px';
+                        div.style.left = left + '%';
+                        div.style.width = trackWidth + '%';
+                    }
 
                     if (editMode) {
                         div.draggable = true;
@@ -2762,7 +2844,7 @@
                             <button class="event-action-btn btn-delete" onclick="event.stopPropagation(); deleteEvent(${event.id})" title="Eliminar">🗑️</button>
                         </div>` : ''}
                         ${conflictIndices.has(event._idx) ? '<span class="conflict-badge">!</span>' : ''}
-                        <div class="event-time">${event.time}</div>
+                        ${noTime ? '<span class="untimed-chip">🕓 Horario a confirmar</span>' : `<div class="event-time">${event.time}</div>`}
                         <div class="event-title">${event.title}</div>
                         ${event.location ? `<span class="event-location">${event.location}</span>` : ''}
                         <div class="event-speakers">
@@ -2790,11 +2872,24 @@
                         div.onclick = () => showEventDetails(event);
                     }
 
-                    eventsArea.appendChild(div);
+                    if (noTime) {
+                        untimedBand.appendChild(div);
+                    } else {
+                        eventsArea.appendChild(div);
+                    }
                 });
 
                 dayScroll.appendChild(eventsArea);
                 content.appendChild(dayScroll);
+                if (untimedEvents.length > 0) column.appendChild(untimedBand);
+
+                // Pista de "hay más a la derecha" (sólo mobile, ver CSS)
+                const hint = document.createElement('div');
+                hint.className = 'scroll-hint hidden';
+                hint.textContent = '→ deslizá para ver más talleres';
+                column.appendChild(hint);
+                dayScroll.addEventListener('scroll', () => hint.classList.add('hidden'), { once: true });
+
                 column.appendChild(content);
 
                 if (preCongressDays.includes(day)) {
@@ -2807,7 +2902,28 @@
             // Hide section titles if empty
             document.getElementById('sectionPre').style.display = gridPre.children.length ? '' : 'none';
             document.getElementById('sectionCongreso').style.display = gridCongreso.children.length ? '' : 'none';
+
+            marcarDiasConScroll();
         }
+
+        // Marca los días cuyo timeline no entra en pantalla, para mostrar el
+        // gradiente del borde y el aviso de deslizar. Hay que medir con el DOM
+        // ya pintado, y volver a medir si cambia el ancho de la ventana.
+        function marcarDiasConScroll() {
+            requestAnimationFrame(() => {
+                document.querySelectorAll('.day-scroll').forEach(ds => {
+                    const content = ds.closest('.day-content');
+                    const hint = content && content.parentElement
+                        ? content.parentElement.querySelector('.scroll-hint')
+                        : null;
+                    const hayOverflow = ds.scrollWidth > ds.clientWidth + 4;
+                    if (content) content.classList.toggle('has-overflow', hayOverflow);
+                    if (hint) hint.classList.toggle('hidden', !hayOverflow || ds.scrollLeft > 0);
+                });
+            });
+        }
+
+        window.addEventListener('resize', marcarDiasConScroll);
 
         // Drag and drop handlers
         function handleDragStart(e) {
