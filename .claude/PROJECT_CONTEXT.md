@@ -1,5 +1,20 @@
 # Contexto del Proyecto - Congreso Anestesiología 2026
 
+<!-- ESTADO:INICIO — bloque estructurado que lee el orquestador (Lucy) para el
+     seguimiento de proyectos. NO borrar los marcadores ni cambiar los nombres de
+     los campos: se parsean. El texto libre del resto del archivo no se toca.
+     Está vacío a propósito: lo completa el primer /park, con datos reales. -->
+```yaml
+esfera: ""                # Personal | Familia | Hogar | Trabajo | Emprendimiento
+objetivo: ""              # el resultado concreto que cierra este proyecto
+estado: activo            # activo | pausado | incubadora | completado
+ultima_actividad: null
+proxima_accion: ""        # UNA acción concreta y accionable
+deadline: null            # solo si hay una fecha límite real
+esperando: []             # [{de: "quién", que: "qué", desde: AAAA-MM-DD}]
+```
+<!-- ESTADO:FIN -->
+
 ## Última sesión
 - **Fecha**: 2026-08-28
 - **Branch**: main
