@@ -2266,6 +2266,47 @@
             return [...(event.instructores || []), ...(event.coordinators || []), ...(event.asistentes || [])]
                 .some(x => mismaPersona(x, nombre));
         }
+        /* Baja quirurgica: una entrada puede empaquetar VARIAS personas bajo una
+           misma estacion ("RCP: Dra. Andrea Gastelu · Dra. Lucia Devera"), asi
+           que filtrar la entrada entera se lleva puesta a la companera. Se saca
+           solo el tramo de la persona y se conserva la etiqueta de estacion
+           mientras quede alguien atras. (Gemelo de sinPersona() en postulacion.html.) */
+        const ETIQUETA_EQUIPO = /^\s*([^:·]{1,40}):\s*/;
+        function sinPersona(lista, nombre) {
+            let saco = false;
+            const out = [];
+            (lista || []).forEach(entrada => {
+                const s = String(entrada);
+                const m = s.match(ETIQUETA_EQUIPO);
+                const partes = (m ? s.slice(m[0].length) : s)
+                    .split('·').map(x => x.trim()).filter(Boolean);
+                const quedan = partes.filter(p => !mismaPersona(p, nombre));
+                if (quedan.length === partes.length) { out.push(s); return; }
+                saco = true;
+                if (quedan.length) out.push((m ? m[1].trim() + ': ' : '') + quedan.join(' · '));
+            });
+            return { lista: out, saco };
+        }
+        /* Quita a alguien de los tres campos de equipo y ajusta `faltan`.
+           Devuelve true si estaba. */
+        function quitarDeEquipo(event, nombre) {
+            let saco = false;
+            ['instructores', 'coordinators', 'asistentes'].forEach(campo => {
+                const r = sinPersona(event[campo], nombre);
+                if (!r.saco) return;
+                event[campo] = r.lista;
+                saco = true;
+                if (campo === 'instructores') ajustarFaltan(event, +1);
+            });
+            return saco;
+        }
+        /* Quien aviso que NO puede pero sigue figurando en el equipo. Con la
+           auto-baja de postulacion.html esto ya no deberia pasar solo, pero
+           queda para los casos cargados a mano y los previos a ese arreglo. */
+        function cancelacionesPendientes(event) {
+            return (event.confirmaciones || [])
+                .filter(c => c.estado !== 'confirmado' && enElEquipo(event, c.nombre));
+        }
 
         /* ---- Postulaciones: aprobar / rechazar / quitar ---- */
         function estadoPostulacion(event, p) {
@@ -2455,14 +2496,29 @@
             if (!event) return;
             const p = (event.postulaciones || [])[idx];
             if (!p) return;
-            ['instructores', 'coordinators', 'asistentes'].forEach(campo => {
-                if (event[campo]) event[campo] = event[campo].filter(x => !mismaPersona(x, p.nombre));
-            });
+            quitarDeEquipo(event, p.nombre);
             delete p.estado;
             delete p.fechaAprobacion;
-            if (p.rol !== 'formacion') ajustarFaltan(event, +1);
             saveData();
             showToast(p.nombre + ' quitado del equipo (vuelve a pendiente)', 'info');
+            refrescarDetalle(event);
+        }
+
+        /* Saca del equipo a quien aviso que no puede. Tambien deja de baja su
+           postulacion si tenia: sin eso volveria a contarse como pendiente. */
+        function quitarCancelado(eventId, nombre) {
+            const event = events.find(e => e.id == eventId);
+            if (!event) return;
+            if (!confirm('Quitar a ' + nombre + ' del equipo y liberar el cupo?\n\nLa confirmacion queda registrada.')) return;
+            if (!quitarDeEquipo(event, nombre)) { showToast(nombre + ' ya no estaba en el equipo', 'info'); return; }
+            (event.postulaciones || []).forEach(p => {
+                if (mismaPersona(p.nombre, nombre) && p.estado !== 'baja') {
+                    p.estado = 'baja';
+                    p.fechaBaja = new Date().toISOString();
+                }
+            });
+            saveData();
+            showToast(nombre + ' quitado del equipo · cupo liberado', 'success');
             refrescarDetalle(event);
         }
 
@@ -3070,6 +3126,23 @@
                         <div class="info-label">Confirmaciones recibidas</div>
                         <div class="speaker-list">
                             ${event.confirmaciones.map(c => `<span class="speaker-chip">${c.estado === 'confirmado' ? '✅' : '❌'} ${c.nombre}${c.motivo ? ' — ' + c.motivo : ''}</span>`).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${cancelacionesPendientes(event).length > 0 ? `
+                    <div class="info-card speakers-card" style="border-left-color:#f59e0b">
+                        <div class="info-label">⚠️ Avisaron que no pueden, pero siguen asignados</div>
+                        <div>
+                            ${cancelacionesPendientes(event).map(c => `<div class="post-row baja" style="opacity:1">
+                                <div class="post-info">
+                                    <b>❌ ${esc(c.nombre)}</b>
+                                    <div class="post-meta">${c.motivo ? '“' + esc(c.motivo) + '”' : 'sin motivo'}${c.fecha ? ' · ' + c.fecha.slice(8,10) + '/' + c.fecha.slice(5,7) : ''}</div>
+                                </div>
+                                ${editMode ? `<div class="post-acts">
+                                    <button class="re" onclick="quitarCancelado(${event.id},'${esc(c.nombre).replace(/'/g, "\\'")}')">↩ Quitar y liberar cupo</button>
+                                </div>` : ''}
+                            </div>`).join('')}
                         </div>
                     </div>
                     ` : ''}

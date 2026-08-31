@@ -195,6 +195,36 @@ const mismaPersona = (a, b) => {
 const esMio = n => mismaPersona(n, yo);
 const dm = f => f ? f.slice(8, 10) + '/' + f.slice(5, 7) : '';
 
+/* ── baja quirurgica dentro de una lista de equipo ────────────────────
+   Una entrada puede empaquetar VARIAS personas bajo una misma estacion
+   ("RCP: Dra. Andrea Gastelu · Dra. Lucia Devera"). Filtrar la entrada
+   entera —como hacia quitarDelEquipo()— se lleva puesta a la companera.
+   Se saca solo el tramo de la persona y se conserva la etiqueta de
+   estacion mientras quede alguien atras. */
+const ETIQUETA = /^\s*([^:·]{1,40}):\s*/;
+function sinPersona(lista, nombre) {
+  let saco = false;
+  const out = [];
+  (lista || []).forEach(entrada => {
+    const s = String(entrada);
+    const m = s.match(ETIQUETA);
+    const partes = (m ? s.slice(m[0].length) : s)
+      .split('·').map(x => x.trim()).filter(Boolean);
+    const quedan = partes.filter(p => !mismaPersona(p, nombre));
+    if (quedan.length === partes.length) { out.push(s); return; }
+    saco = true;
+    if (quedan.length) out.push((m ? m[1].trim() + ': ' : '') + quedan.join(' · '));
+  });
+  return { lista: out, saco };
+}
+/* `faltan` es un contador curado a mano por el comite: no se puede
+   recalcular como requeridos - instructores.length (ver cupos()). */
+function sumarFaltan(e, delta) {
+  if (typeof e.faltan !== 'number') return;
+  const tope = typeof e.requeridos === 'number' ? e.requeridos : 99;
+  e.faltan = Math.min(tope, Math.max(0, e.faltan + delta));
+}
+
 /* ── carga ───────────────────────────────────────────── */
 async function cargar() {
   try {
@@ -471,6 +501,27 @@ async function enviar() {
           e.confirmaciones = (e.confirmaciones || []).filter(c => !esMio(c.nombre));
           e.confirmaciones.push({ nombre: yo, contacto,
             estado: conf[e.id].estado, motivo: conf[e.id].motivo || '', fecha: sello });
+          /* "No puedo" tiene que LIBERAR el lugar. Antes solo se anotaba la
+             confirmacion: el nombre seguia figurando como instructor en el
+             programa publico y el cupo se anunciaba completo, asi que nadie
+             podia postularse al lugar que en realidad habia quedado vacio.
+             Idempotente: si el PUT se reintenta, saco ya viene en false y
+             `faltan` no se suma dos veces. */
+          if (conf[e.id].estado === 'no_puede') {
+            ['instructores', 'coordinators', 'asistentes'].forEach(campo => {
+              const r = sinPersona(e[campo], yo);
+              if (!r.saco) return;
+              e[campo] = r.lista;
+              if (campo === 'instructores') sumarFaltan(e, +1);
+            });
+            /* Si ademas tenia una postulacion aprobada, se marca de baja: si
+               no, al perder el lugar en el equipo volveria a contarse como
+               PENDIENTE y el comite podria re-aprobar a quien acaba de avisar
+               que no puede. Se marca, no se borra: queda el rastro. */
+            (e.postulaciones || []).forEach(p => {
+              if (esMio(p.nombre) && p.estado !== 'baja') { p.estado = 'baja'; p.fechaBaja = sello; }
+            });
+          }
         }
         if (post[e.id]) {
           e.postulaciones = (e.postulaciones || []).filter(p => !esMio(p.nombre));
