@@ -16,6 +16,14 @@
       "sessions": 0,
       "memories": 1,
       "prompts": 0
+    },
+    {
+      "id": "63c0c6f5",
+      "created_by": "wmb",
+      "created_at": "2026-09-01T02:46:30Z",
+      "sessions": 4,
+      "memories": 7,
+      "prompts": 0
     }
   ]
 }
